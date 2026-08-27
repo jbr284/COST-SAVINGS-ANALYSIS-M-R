@@ -19,11 +19,11 @@ window.db = db;
 window.transacoes = []; 
 window.regras = [];     
 window.contas = [];
-window.categoriasExtras = []; // NOVA VARIÁVEL!
+window.categoriasExtras = []; 
 window.transacoesPendentes = []; 
 let chartInstance = null; 
 
-// CATEGORIAS FIXAS DO SISTEMA
+// CATEGORIAS FIXAS
 const CATEGORIAS_PADRAO = [
     {v: 'classificar', l: '⚠️ A Classificar'},
     {v: 'transferencia_interna', l: '🔄 Transferência Interna'},
@@ -47,16 +47,13 @@ window.carregarTodosOsDados = async () => {
         const snapTransacoes = await getDocs(collection(db, "banco_transacoes"));
         window.transacoes = snapTransacoes.docs.map(d => d.data());
         
-        // Puxa as Categorias Customizadas do Firebase
         const snapCats = await getDocs(collection(db, "banco_categorias"));
         window.categoriasExtras = snapCats.docs.map(d => d.data());
 
         window.renderizarContas();
         window.renderizarDropdownContas();
-        
-        window.renderizarCategoriasConfig(); // Desenha na aba configurações
-        window.renderizarFiltroCategoria();  // Desenha no Filtro da Peneira
-
+        window.renderizarCategoriasConfig(); 
+        window.renderizarFiltroCategoria();  
         window.renderizarRegistrosSalvos();
         window.renderizarDashboard();
     } catch (e) { console.error("Erro DB: ", e); }
@@ -65,23 +62,10 @@ window.carregarTodosOsDados = async () => {
 // ==========================================
 // MÓDULO DE CATEGORIAS CUSTOMIZADAS
 // ==========================================
-// Pega todas as categorias juntas (Padrão + Extras)
-function getTodasCategorias() {
-    return [...CATEGORIAS_PADRAO, ...window.categoriasExtras];
-}
+function getTodasCategorias() { return [...CATEGORIAS_PADRAO, ...window.categoriasExtras]; }
+function getCatLabel(val) { const found = getTodasCategorias().find(c => c.v === val); return found ? found.l : val.toUpperCase(); }
+function getSelectOptions(catSelected) { return getTodasCategorias().map(c => `<option value="${c.v}" ${catSelected === c.v ? 'selected' : ''}>${c.l}</option>`).join(''); }
 
-// Retorna o rótulo bonito (com emoji) para usar no Dashboard
-function getCatLabel(val) {
-    const found = getTodasCategorias().find(c => c.v === val);
-    return found ? found.l : val.toUpperCase();
-}
-
-// Cria o HTML das tags <option> para os selects
-function getSelectOptions(catSelected) {
-    return getTodasCategorias().map(c => `<option value="${c.v}" ${catSelected === c.v ? 'selected' : ''}>${c.l}</option>`).join('');
-}
-
-// Preenche o Filtro da Aba Registros
 window.renderizarFiltroCategoria = () => {
     const sel = document.getElementById('filtroCategoria');
     if(!sel) return;
@@ -89,16 +73,13 @@ window.renderizarFiltroCategoria = () => {
 };
 
 window.adicionarCategoria = async () => {
-    const emoji = document.getElementById('cadCatEmoji').value.trim() || '🏷️';
+    const emoji = document.getElementById('cadCatEmoji').value || '🏷️';
     const nome = document.getElementById('cadCatNome').value.trim();
-    
     if(!nome) return alert("Preencha o nome da categoria.");
     
-    // Transforma "Cartão de Crédito" em "cartao_de_credito"
     const valorID = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
     const labelVisual = `${emoji} ${nome}`;
     
-    // Verifica se já existe
     if(getTodasCategorias().find(c => c.v === valorID)) return alert("Esta categoria já existe!");
 
     const novaCat = { id: `CAT-${Date.now()}`, v: valorID, l: labelVisual };
@@ -106,23 +87,19 @@ window.adicionarCategoria = async () => {
     try {
         await setDoc(doc(db, "banco_categorias", novaCat.id), novaCat);
         window.categoriasExtras.push(novaCat);
-        
-        document.getElementById('cadCatEmoji').value = '';
         document.getElementById('cadCatNome').value = '';
-        
         window.renderizarCategoriasConfig();
         window.renderizarFiltroCategoria();
-        window.renderizarRegistrosSalvos(); // Atualiza tabelas abertas
+        window.renderizarRegistrosSalvos(); 
         window.mostrarToast("Categoria Criada!");
     } catch(e) { alert("Erro ao criar categoria."); }
 };
 
 window.excluirCategoria = async (id) => {
-    if(!confirm("Tem certeza que deseja excluir esta categoria customizada?")) return;
+    if(!confirm("Deseja excluir esta categoria customizada?")) return;
     try {
         await deleteDoc(doc(db, "banco_categorias", id));
         window.categoriasExtras = window.categoriasExtras.filter(c => c.id !== id);
-        
         window.renderizarCategoriasConfig();
         window.renderizarFiltroCategoria();
         window.renderizarRegistrosSalvos();
@@ -147,7 +124,7 @@ window.renderizarCategoriasConfig = () => {
 
 
 // ==========================================
-// MÓDULO 1: IMPORTAÇÃO E CAÇADOR
+// IMPORTAÇÃO E CAÇADOR
 // ==========================================
 function autoCategorizar(desc) {
     if(!desc) return 'classificar';
@@ -249,7 +226,7 @@ function finalizarImportacao() {
 }
 
 // ==========================================
-// MÓDULO 2: REGISTROS (A SANFONA)
+// REGISTROS (COM ORDENAÇÃO E FILTRO DE CONTA)
 // ==========================================
 window.renderizarRegistrosSalvos = () => {
     const containerSanfona = document.getElementById('area-sanfonas');
@@ -278,18 +255,19 @@ window.renderizarRegistrosSalvos = () => {
         containerPend.innerHTML = "";
     }
 
-    // FILTROS
+    // APLICAR FILTROS
     let tFiltradas = [...window.transacoes];
+    const fConta = document.getElementById('filtroConta').value;
     const fCat = document.getElementById('filtroCategoria').value;
     const fTipo = document.getElementById('filtroTipo').value;
+    const fOrdem = document.getElementById('filtroOrdem').value;
     
+    if (fConta !== 'todas') tFiltradas = tFiltradas.filter(t => t.contaOrigem === fConta);
     if (fCat !== 'todas') tFiltradas = tFiltradas.filter(t => t.categoria === fCat);
     if (fTipo !== 'todos') tFiltradas = tFiltradas.filter(t => t.tipo === fTipo);
 
-    // AGRUPAMENTO
+    // AGRUPAR POR MÊS/ANO
     const grupos = {};
-    tFiltradas.sort((a,b) => new Date(b.data) - new Date(a.data));
-    
     tFiltradas.forEach(t => {
         const [a, m] = t.data.split('-');
         const mesAno = `${m}/${a}`;
@@ -302,12 +280,31 @@ window.renderizarRegistrosSalvos = () => {
         return;
     }
 
+    // ORDENAR OS GRUPOS (Para que os meses mais recentes fiquem no topo)
+    const chavesOrdenadas = Object.keys(grupos).sort((a, b) => {
+        const [ma, aa] = a.split('/'); const [mb, ab] = b.split('/');
+        return new Date(`${ab}-${mb}-01`) - new Date(`${aa}-${ma}-01`);
+    });
+
     const mesesNomes = {'01':'Janeiro','02':'Fevereiro','03':'Março','04':'Abril','05':'Maio','06':'Junho','07':'Julho','08':'Agosto','09':'Setembro','10':'Outubro','11':'Novembro','12':'Dezembro'};
     let htmlS = "";
     
-    for (let mesAno in grupos) {
+    // GERAR SANFONAS COM ORDENAÇÃO INTERNA
+    for (let mesAno of chavesOrdenadas) {
         const [m, a] = mesAno.split('/');
-        const trns = grupos[mesAno];
+        let trns = grupos[mesAno];
+        
+        // APLICAR ORDENAÇÃO ESCOLHIDA (Dentro do Mês)
+        trns.sort((itemA, itemB) => {
+            if (fOrdem === 'data_desc') return new Date(itemB.data) - new Date(itemA.data);
+            if (fOrdem === 'data_asc') return new Date(itemA.data) - new Date(itemB.data);
+            if (fOrdem === 'valor_desc') return Math.abs(itemB.valor) - Math.abs(itemA.valor);
+            if (fOrdem === 'valor_asc') return Math.abs(itemA.valor) - Math.abs(itemB.valor);
+            if (fOrdem === 'az') return itemA.descricao.localeCompare(itemB.descricao);
+            if (fOrdem === 'za') return itemB.descricao.localeCompare(itemA.descricao);
+            return 0;
+        });
+
         let subtotal = trns.reduce((acc, curr) => acc + curr.valor, 0);
         let corSub = subtotal >= 0 ? '#4caf50' : '#f44336';
 
@@ -397,7 +394,7 @@ window.salvarExtratoReal = async () => {
 // ==========================================
 window.recategorizarInline = async (id, selectEl, oldCat) => {
     const novaCat = selectEl.value;
-    if (!confirm(`⚠️ ALERTA DE SEGURANÇA:\nTem a certeza que deseja alterar a categoria deste lançamento para "${getCatLabel(novaCat)}"?`)) {
+    if (!confirm(`⚠️ ALERTA DE SEGURANÇA:\nDeseja alterar a categoria deste lançamento para "${getCatLabel(novaCat)}"?`)) {
         selectEl.value = oldCat; 
         return;
     }
@@ -511,7 +508,6 @@ window.renderizarDashboard = () => {
             tDespesas += val;
             bancosResumo[t.contaOrigem].d += val;
             
-            // Usa a função inteligente para buscar o Nome+Emoji da categoria!
             const catName = getCatLabel(t.categoria);
             if (!porCategoria[catName]) porCategoria[catName] = 0;
             porCategoria[catName] += val;
@@ -605,11 +601,18 @@ window.renderizarDashboard = () => {
 // FUNÇÕES AUXILIARES (CONTAS, NAVEGAÇÃO, AUTH)
 // ==========================================
 window.renderizarDropdownContas = () => { 
-    const sel = document.getElementById('contaImportacao');
-    if(!sel) return;
-    sel.innerHTML = '<option value="">-- OBRIGATÓRIO: Selecione a Conta --</option>';
-    window.contas.forEach(c => { sel.appendChild(new Option(`${c.banco} - ${c.titular}`, c.id)); });
+    const selC = document.getElementById('contaImportacao');
+    const selF = document.getElementById('filtroConta');
+    if(selC) selC.innerHTML = '<option value="">-- OBRIGATÓRIO: Selecione a Conta --</option>';
+    if(selF) selF.innerHTML = '<option value="todas">Todas as Contas</option>';
+    
+    window.contas.forEach(c => { 
+        if(selC) selC.appendChild(new Option(`${c.banco} - ${c.titular}`, c.id)); 
+        if(selF) selF.appendChild(new Option(`${c.banco} - ${c.titular}`, c.id)); 
+    });
+    if(selF) selF.appendChild(new Option(`Lançamentos Manuais`, 'Manual')); 
 };
+
 window.adicionarConta = async () => { 
     const b = document.getElementById('cadBanco').value.trim();
     const t = document.getElementById('cadTitular').value.trim();
@@ -619,6 +622,7 @@ window.adicionarConta = async () => {
     await setDoc(doc(db, "banco_contas", nC.id), nC);
     window.contas.push(nC); window.renderizarContas(); window.renderizarDropdownContas(); window.mostrarToast("Conta Salva!");
 };
+
 window.renderizarContas = () => { 
     const div = document.getElementById('lista-contas-container');
     if(!div) return;
