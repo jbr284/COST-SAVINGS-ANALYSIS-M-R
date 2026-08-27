@@ -98,7 +98,7 @@
                         </select>
                     </div>
                 </div>
-                <button class="btn-action" style="background-color: #f57c00; margin-top: 15px;" onclick="alert('Lógica avulsa em breve!')">➕ Adicionar Lançamento</button>
+                <button class="btn-action" style="background-color: #f57c00; margin-top: 15px;" onclick="window.adicionarLancamentoAvulso()">➕ Adicionar Lançamento</button>
             </div>
         </div>
 
@@ -114,8 +114,10 @@
         <!-- ABA 3: DASHBOARD -->
         <div id="painel-dashboard" class="panel">
             <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Evolução de Cost Savings</h3>
-            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; color: #666;">
-                Os relatórios e o balanço financeiro aparecerão aqui em breve.
+            <div id="painel-dashboard-content">
+                <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; color: #666;">
+                    A calcular métricas...
+                </div>
             </div>
         </div>
 
@@ -146,10 +148,9 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- BIBLIOTECA PAPA PARSE PARA LEITURA DE CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   
-  <script type="module" src="app.js?v=1.4"></script>
+  <script type="module" src="app.js?v=1.5"></script>
   
   <script>
     if ('serviceWorker' in navigator) {
