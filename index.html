@@ -68,9 +68,16 @@
         <div id="painel-importacao" class="panel active">
             <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Importar Extrato Bancário</h3>
             
+            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 15px;">
+                <label style="color: #c62828;">1º Passo: Selecione de qual conta é este extrato</label>
+                <select id="contaImportacao" style="padding: 10px; width: 100%; border: 1px solid #1565c0; border-radius: 4px; font-weight: bold; color: #1565c0;">
+                    <option value="">-- Carregando Contas... --</option>
+                </select>
+            </div>
+
             <div class="upload-box" onclick="document.getElementById('arquivoExtrato').click()">
                 <div class="upload-icon">📄</div>
-                <h4 style="color: #1565c0; margin: 0 0 5px 0;">Clique ou arraste o seu arquivo aqui</h4>
+                <h4 style="color: #1565c0; margin: 0 0 5px 0;">2º Passo: Clique ou arraste o seu extrato aqui</h4>
                 <p style="color: #666; font-size: 12px; margin: 0;">Formatos aceitos: <b>.OFX</b> e <b>.CSV</b></p>
                 <input type="file" id="arquivoExtrato" accept=".ofx, .csv" style="display: none;" onchange="window.processarArquivo(event)">
             </div>
@@ -108,7 +115,7 @@
         <div id="painel-dashboard" class="panel">
             <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Evolução de Cost Savings</h3>
             <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; color: #666;">
-                Os gráficos de despesas vs receitas aparecerão aqui.
+                Os relatórios e o balanço financeiro aparecerão aqui em breve.
             </div>
         </div>
 
@@ -116,8 +123,7 @@
         <div id="painel-configuracoes" class="panel">
             <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Gestão de Contas e Fontes</h3>
             <p style="font-size: 13px; color: #555; margin-bottom: 20px;">
-                Cadastre aqui os bancos, a titularidade e a principal fonte de receita de cada um. <br>
-                Isso ajuda o sistema a identificar a origem dos recursos e a aplicar as regras de <b>Transferência Interna</b>.
+                Cadastre aqui os bancos, a titularidade e a principal fonte de receita de cada um.
             </p>
             
             <div class="form-box">
@@ -138,7 +144,7 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=1.2"></script>
+  <script type="module" src="app.js?v=1.3"></script>
   
   <script>
     if ('serviceWorker' in navigator) {
