@@ -1,12 +1,11 @@
-
 {
-  "name": "Controle Financeiro - Família Rosa",
-  "short_name": "Controle Financeiro",
-  "description": "Aplicação de controle financeiro familiar.",
-  "start_url": "./",
+  "name": "Cost Savings Analysis M&R",
+  "short_name": "Cost Savings",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f9f9f9",
-  "theme_color": "#4CAF50",
+  "background_color": "#0a192f",
+  "theme_color": "#002f6c",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192x192.png",
