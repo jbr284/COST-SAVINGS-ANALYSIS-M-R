@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cost Savings Analysis M&R</title>
   
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
   <meta name="theme-color" content="#002f6c">
   <link rel="stylesheet" href="style.css">
 
@@ -89,14 +91,14 @@
                         </select>
                     </div>
                 </div>
-                <button class="btn-action" style="background-color: #f57c00; margin-top: 15px;" onclick="alert('Lógica em breve!')">➕ Adicionar Lançamento</button>
+                <button class="btn-action" style="background-color: #f57c00; margin-top: 15px;" onclick="alert('Lógica avulsa em breve!')">➕ Adicionar Lançamento</button>
             </div>
         </div>
 
         <!-- ABA 2: CLASSIFICAÇÃO -->
         <div id="painel-classificacao" class="panel">
             <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Peneira de Classificação</h3>
-            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; color: #666;">
+            <div id="classificacao-container" style="background: white; padding: 20px; border-radius: 8px; text-align: center; color: #666;">
                 Nenhum extrato aguardando classificação no momento.<br>
                 Importe um arquivo OFX ou CSV na aba anterior.
             </div>
@@ -118,18 +120,16 @@
                 Isso ajuda o sistema a identificar a origem dos recursos e a aplicar as regras de <b>Transferência Interna</b>.
             </p>
             
-            <!-- FORMULÁRIO DE CADASTRO -->
             <div class="form-box">
                 <h4 style="color: #f57c00; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #ffe0b2; padding-bottom: 5px;">Nova Conta</h4>
                 <div class="grid-input" style="grid-template-columns: 1fr 1fr 1fr;">
                     <div><label>Banco:</label><input type="text" id="cadBanco" placeholder="Ex: Bradesco"></div>
-                    <div><label>Conta (Titular):</label><input type="text" id="cadTitular" placeholder="Ex: João B. Rosa"></div>
+                    <div><label>Titular (Conta):</label><input type="text" id="cadTitular" placeholder="Ex: João B. Rosa"></div>
                     <div><label>Fonte / Origem:</label><input type="text" id="cadFonte" placeholder="Ex: Rem. Modular"></div>
                 </div>
                 <button class="btn-action btn-green" style="margin-top: 15px;" onclick="window.adicionarConta()">💾 Adicionar Conta</button>
             </div>
 
-            <!-- TABELA DE CONTAS CADASTRADAS -->
             <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:20px;">Contas Cadastradas</h3>
             <div id="lista-contas-container"></div>
             
@@ -138,6 +138,14 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=1.1"></script>
+  <script type="module" src="app.js?v=1.2"></script>
+  
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(registration => { console.log('SW ok'); }).catch(error => { console.log('SW erro'); });
+      });
+    }
+  </script>
 </body>
 </html>
