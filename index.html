@@ -11,7 +11,6 @@
   <link rel="stylesheet" href="style.css">
 
   <style>
-    /* Estilos do Topo e Abas */
     .app-header { background-color: #0a192f; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
     .app-title { font-weight: 900; letter-spacing: 1px; font-size: 18px; text-transform: uppercase; text-align: center; margin: 0; }
     .subtitle { font-size: 10px; color: #90caf9; letter-spacing: 0.5px; display: block; text-align: center; }
@@ -26,15 +25,39 @@
     .upload-box { border: 2px dashed #90caf9; background: #e3f2fd; padding: 40px; text-align: center; border-radius: 12px; cursor: pointer; transition: 0.3s; margin-bottom: 20px; }
     .upload-box:hover { background: #bbdefb; border-color: #1565c0; }
     
-    /* Sanfona (Accordion) */
     .accordion { background-color: #1565c0; color: white; cursor: pointer; padding: 15px; width: 100%; border: none; text-align: left; outline: none; font-size: 14px; font-weight: bold; border-radius: 6px; margin-top: 15px; transition: 0.3s; display: flex; justify-content: space-between; }
     .accordion.active, .accordion:hover { background-color: #0d47a1; }
     .accordion-panel { padding: 0 15px; background-color: white; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; border: 1px solid #ddd; border-top: none; border-radius: 0 0 6px 6px; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; }
   </style>
 </head>
 <body>
 
   <div id="toast">✅ Operação realizada!</div>
+
+  <!-- MODAL DE EDIÇÃO -->
+  <div id="modal-editar" class="modal-overlay hidden noprint">
+      <div class="form-box" style="width: 90%; max-width: 400px; margin: 0;">
+          <h3 style="color:#0d47a1; margin-top:0; border-bottom: 1px solid #eee; padding-bottom:10px;">Editar Lançamento</h3>
+          <input type="hidden" id="editId">
+          <div class="grid-input" style="grid-template-columns: 1fr;">
+              <div><label>Data:</label><input type="date" id="editData"></div>
+              <div><label>Descrição:</label><input type="text" id="editDesc"></div>
+              <div><label>Valor (R$):</label><input type="number" id="editValor" step="0.01"></div>
+              <div>
+                  <label>Tipo:</label>
+                  <select id="editTipo">
+                      <option value="despesa">Saída (Despesa)</option>
+                      <option value="receita">Entrada (Receita)</option>
+                  </select>
+              </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:20px;">
+              <button class="btn-action" style="background:#78909c;" onclick="document.getElementById('modal-editar').classList.add('hidden')">Cancelar</button>
+              <button class="btn-action btn-green" onclick="window.salvarEdicao()">💾 Salvar</button>
+          </div>
+      </div>
+  </div>
 
   <!-- TELA LOGIN -->
   <div id="tela-login" class="container-center hidden">
@@ -104,25 +127,17 @@
             </div>
         </div>
 
-        <!-- ABA 2: REGISTROS (A Sanfona e Filtros) -->
+        <!-- ABA 2: REGISTROS -->
         <div id="painel-registros" class="panel print-area">
             <div class="noprint">
                 <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Filtros e Lançamentos</h3>
-                
-                <!-- Barra de Filtros -->
                 <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px;">
                     <div class="grid-input" style="grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
                         <div>
                             <label>Filtrar por Categoria:</label>
+                            <!-- O JS vai popular isso aqui dinamicamente -->
                             <select id="filtroCategoria" onchange="window.renderizarRegistrosSalvos()">
                                 <option value="todas">Todas as Categorias</option>
-                                <option value="alimentacao">Alimentação</option>
-                                <option value="transporte">Transporte</option>
-                                <option value="moradia">Moradia</option>
-                                <option value="lazer">Lazer</option>
-                                <option value="saude">Saúde</option>
-                                <option value="salario">Salário / Receitas</option>
-                                <option value="transferencia_interna">Transferência Interna</option>
                             </select>
                         </div>
                         <div>
@@ -140,29 +155,24 @@
                 </div>
             </div>
 
-            <!-- Header para o PDF -->
             <div class="onlyprint" style="text-align: center; margin-bottom: 20px;">
                 <h2 style="color: #0d47a1; margin: 0;">COST SAVINGS ANALYSIS M&R</h2>
                 <p style="margin: 5px 0; color: #555;">Relatório de Registros Financeiros</p>
             </div>
 
-            <!-- Área de Transações Pendentes (Se acabou de importar) -->
             <div id="area-pendentes" class="noprint"></div>
-
-            <!-- Container das Sanfonas -->
             <div id="area-sanfonas"></div>
         </div>
 
         <!-- ABA 3: DASHBOARD -->
         <div id="painel-dashboard" class="panel noprint">
             <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Balanço Executivo</h3>
-            <div id="painel-dashboard-content">
-                A calcular métricas...
-            </div>
+            <div id="painel-dashboard-content">A calcular métricas...</div>
         </div>
 
         <!-- ABA 4: CONFIGURAÇÕES -->
         <div id="painel-configuracoes" class="panel noprint">
+            <!-- BLOCO 1: CONTAS -->
             <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Gestão de Contas e Fontes</h3>
             <div class="form-box">
                 <h4 style="color: #f57c00; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #ffe0b2; padding-bottom: 5px;">Nova Conta</h4>
@@ -173,19 +183,34 @@
                 </div>
                 <button class="btn-action btn-green" style="margin-top: 15px;" onclick="window.adicionarConta()">💾 Adicionar Conta</button>
             </div>
-            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:20px;">Contas Cadastradas</h3>
+            <h3 style="color:#0d47a1; margin-bottom: 5px;">Contas Cadastradas</h3>
             <div id="lista-contas-container"></div>
+            
+            <hr style="margin: 40px 0 30px 0; border: 0; border-top: 2px dashed #ccc;">
+
+            <!-- BLOCO 2: CATEGORIAS EXTRAS -->
+            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Gestão de Categorias Customizadas</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Faltou alguma opção no sistema? Crie as suas próprias categorias de despesa ou receita aqui.</p>
+            <div class="form-box">
+                <h4 style="color: #f57c00; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #ffe0b2; padding-bottom: 5px;">Nova Categoria</h4>
+                <div class="grid-input" style="grid-template-columns: 80px 1fr;">
+                    <div><label>Emoji:</label><input type="text" id="cadCatEmoji" placeholder="Ex: 🐶"></div>
+                    <div><label>Nome da Categoria:</label><input type="text" id="cadCatNome" placeholder="Ex: Petshop e Veterinário"></div>
+                </div>
+                <button class="btn-action" style="background-color: #1565c0; margin-top: 15px;" onclick="window.adicionarCategoria()">➕ Adicionar Categoria</button>
+            </div>
+            <h3 style="color:#0d47a1; margin-bottom: 5px;">Categorias Customizadas</h3>
+            <div id="lista-categorias-container"></div>
+
         </div>
 
     </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <!-- ChartJS Base -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Plugin de Percentagens no Gráfico -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
   
-  <script type="module" src="app.js?v=2.0"></script>
+  <script type="module" src="app.js?v=2.2"></script>
 </body>
 </html>
