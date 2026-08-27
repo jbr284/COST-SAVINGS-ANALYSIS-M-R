@@ -160,7 +160,7 @@ window.renderizarCategoriasConfig = () => {
 };
 
 // ==========================================
-// IMPORTAÇÃO E CAÇADOR INTELIGENTE (ATUALIZADO V2.6)
+// IMPORTAÇÃO E CAÇADOR INTELIGENTE (ATUALIZADO V2.7)
 // ==========================================
 function limparMoedaCSV(val) {
     let n = val.toString().replace(/[R\$\s]/gi, '').trim();
@@ -189,8 +189,6 @@ window.processarArquivo = (event) => {
         document.getElementById('arquivoExtrato').value = ''; 
     };
 
-    // A mágica da codificação: Arquivos CSV modernos (como a Flash) usam UTF-8. 
-    // Arquivos OFX usam ISO-8859-1.
     const encoding = ext === 'csv' ? 'UTF-8' : 'ISO-8859-1';
     reader.readAsText(file, encoding);
 };
@@ -208,6 +206,10 @@ window.processarOFX = (ofx, contaId) => {
             const d = dt[1].substring(0,8);
             const v = parseFloat(vl[1]);
             let desc = (mm && mm[1]) ? mm[1].trim() : ((nm && nm[1]) ? nm[1].trim() : "");
+            
+            // Ignora transações de zero
+            if (v === 0) continue;
+
             window.transacoesPendentes.push({
                 id: `TEMP-${Date.now()}-${i}`, data: `${d.substring(0,4)}-${d.substring(4,6)}-${d.substring(6,8)}`,
                 descricao: desc.substring(0,50), valor: v, tipo: v < 0 ? 'despesa' : 'receita', categoria: autoCategorizar(desc), contaOrigem: contaId
@@ -226,36 +228,32 @@ window.processarCSV = (csv, contaId) => {
             
             cols.forEach(col => {
                 if(typeof col !== 'string') return;
-                // Substitui traços esquisitos do Windows/Mac por hífens normais
                 let cl = col.trim().replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-');
                 if(!cl) return;
 
-                // Tenta achar a Data
                 let dM = cl.match(/^(\d{2}\/\d{2}\/\d{2,4}|\d{4}-\d{2}-\d{2})/);
                 if (!data && dM) { data = dM[1]; return; }
 
-                // Tenta achar o Valor (Ignorando espaços para ler "-R$ 94,00")
                 let numCheck = cl.replace(/\s/g, '').toUpperCase();
                 if (numCheck.match(/^-?(R\$|BRL)?\d{1,3}(\.?\d{3})*,\d{2}$/) || numCheck.match(/^-?(R\$|BRL)?\d+(\.\d{2})$/)) {
                     let v = limparMoedaCSV(cl); 
-                    if (v !== 0) vals.push(v); 
+                    // Mudança V2.7: Agora aceitamos armazenar o 0.00 na lista de valores para não pular para a coluna Saldo!
+                    vals.push(v); 
                     return;
                 }
 
-                // O que sobra vai para a lista de descrição
                 if (!cl.match(/^[0-9\-\.]+$/) && cl !== '') descArr.push(cl);
             });
 
             if (data && vals.length > 0) {
-                // Checa se é a linha de cabeçalho
                 if (descArr.some(d => ['SALDO','HISTÓRICO','DATA','VALOR'].includes(d.toUpperCase()))) return;
                 
                 let valor = vals[0];
                 
-                // Limpa palavras comuns dos bancos (Incluindo a palavra Cartão da Flash)
-                descArr = descArr.filter(d => !['Aprovado','Concluído','Saldo','Cartão'].includes(d));
+                // Nova Regra V2.7: Se o valor for exatamente zero, ignora completamente a transação
+                if (valor === 0) return;
                 
-                // Remove campos que parecem com relógios (ex: 11:36 ou 14:35:00)
+                descArr = descArr.filter(d => !['Aprovado','Concluído','Saldo','Cartão'].includes(d));
                 descArr = descArr.filter(d => !d.match(/^\d{1,2}:\d{2}(:\d{2})?$/));
                 
                 let desc = descArr.sort((a,b)=>b.length - a.length)[0] || "Sem descrição";
@@ -288,7 +286,7 @@ function finalizarImportacao() {
     if (window.transacoesPendentes.length > 0) {
         window.mudarAba('registros'); 
         window.renderizarRegistrosSalvos();
-    } else alert("O arquivo foi lido, mas nenhuma transação válida foi encontrada (pode ser problema no formato).");
+    } else alert("O arquivo foi lido, mas nenhuma transação válida foi encontrada.");
 }
 
 // ==========================================
@@ -298,7 +296,6 @@ window.renderizarRegistrosSalvos = () => {
     const containerSanfona = document.getElementById('area-sanfonas');
     const containerPend = document.getElementById('area-pendentes');
     
-    // PENDENTES
     if (window.transacoesPendentes.length > 0) {
         let htmlP = `<div style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
             <h4 style="color: #d84315; margin-top:0;">⚠️ ${window.transacoesPendentes.length} Lançamentos Pendentes</h4>
@@ -321,7 +318,6 @@ window.renderizarRegistrosSalvos = () => {
         containerPend.innerHTML = "";
     }
 
-    // APLICAR FILTROS
     let tFiltradas = [...window.transacoes];
     const fConta = document.getElementById('filtroConta').value;
     const fCat = document.getElementById('filtroCategoria').value;
@@ -332,7 +328,6 @@ window.renderizarRegistrosSalvos = () => {
     if (fCat !== 'todas') tFiltradas = tFiltradas.filter(t => t.categoria === fCat);
     if (fTipo !== 'todos') tFiltradas = tFiltradas.filter(t => t.tipo === fTipo);
 
-    // AGRUPAR POR MÊS/ANO
     const grupos = {};
     tFiltradas.forEach(t => {
         const [a, m] = t.data.split('-');
