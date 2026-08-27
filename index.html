@@ -35,7 +35,7 @@
 
   <div id="toast">✅ Operação realizada!</div>
 
-  <!-- MODAL DE EDIÇÃO DE LANÇAMENTOS (AVULSOS) -->
+  <!-- MODAL DE EDIÇÃO DE LANÇAMENTOS -->
   <div id="modal-editar" class="modal-overlay hidden noprint">
       <div class="form-box" style="width: 90%; max-width: 400px; margin: 0;">
           <h3 style="color:#0d47a1; margin-top:0; border-bottom: 1px solid #eee; padding-bottom:10px;">Editar Lançamento</h3>
@@ -178,6 +178,7 @@
         <div id="painel-registros" class="panel print-area">
             <div class="noprint">
                 <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Filtros e Lançamentos</h3>
+                
                 <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px;">
                     <div class="grid-input" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
                         <div><label>Banco/Conta:</label><select id="filtroConta" onchange="window.renderizarRegistrosSalvos()"><option value="todas">Todas as Contas</option></select></div>
@@ -283,6 +284,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
   
-  <script type="module" src="app.js?v=2.4"></script>
+  <script type="module" src="app.js?v=2.6"></script>
 </body>
 </html>
