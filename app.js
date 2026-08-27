@@ -59,7 +59,7 @@ window.carregarTodosOsDados = async () => {
 };
 
 // ==========================================
-// MÓDULO DE CATEGORIAS CUSTOMIZADAS
+// CATEGORIAS CUSTOMIZADAS
 // ==========================================
 function getTodasCategorias() { return [...CATEGORIAS_PADRAO, ...window.categoriasExtras]; }
 function getCatLabel(val) { const found = getTodasCategorias().find(c => c.v === val); return found ? found.l : val.toUpperCase(); }
@@ -160,7 +160,7 @@ window.renderizarCategoriasConfig = () => {
 };
 
 // ==========================================
-// IMPORTAÇÃO E CAÇADOR INTELIGENTE (ATUALIZADO V2.7)
+// IMPORTAÇÃO E CAÇADOR INTELIGENTE
 // ==========================================
 function limparMoedaCSV(val) {
     let n = val.toString().replace(/[R\$\s]/gi, '').trim();
@@ -207,7 +207,6 @@ window.processarOFX = (ofx, contaId) => {
             const v = parseFloat(vl[1]);
             let desc = (mm && mm[1]) ? mm[1].trim() : ((nm && nm[1]) ? nm[1].trim() : "");
             
-            // Ignora transações de zero
             if (v === 0) continue;
 
             window.transacoesPendentes.push({
@@ -237,7 +236,6 @@ window.processarCSV = (csv, contaId) => {
                 let numCheck = cl.replace(/\s/g, '').toUpperCase();
                 if (numCheck.match(/^-?(R\$|BRL)?\d{1,3}(\.?\d{3})*,\d{2}$/) || numCheck.match(/^-?(R\$|BRL)?\d+(\.\d{2})$/)) {
                     let v = limparMoedaCSV(cl); 
-                    // Mudança V2.7: Agora aceitamos armazenar o 0.00 na lista de valores para não pular para a coluna Saldo!
                     vals.push(v); 
                     return;
                 }
@@ -249,13 +247,10 @@ window.processarCSV = (csv, contaId) => {
                 if (descArr.some(d => ['SALDO','HISTÓRICO','DATA','VALOR'].includes(d.toUpperCase()))) return;
                 
                 let valor = vals[0];
-                
-                // Nova Regra V2.7: Se o valor for exatamente zero, ignora completamente a transação
                 if (valor === 0) return;
                 
                 descArr = descArr.filter(d => !['Aprovado','Concluído','Saldo','Cartão'].includes(d));
                 descArr = descArr.filter(d => !d.match(/^\d{1,2}:\d{2}(:\d{2})?$/));
-                
                 let desc = descArr.sort((a,b)=>b.length - a.length)[0] || "Sem descrição";
                 
                 let dF = data;
@@ -290,7 +285,7 @@ function finalizarImportacao() {
 }
 
 // ==========================================
-// REGISTROS (COM ORDENAÇÃO E FILTRO DE CONTA)
+// REGISTROS (COM SALDO CORRENTE V2.8)
 // ==========================================
 window.renderizarRegistrosSalvos = () => {
     const containerSanfona = document.getElementById('area-sanfonas');
@@ -328,12 +323,23 @@ window.renderizarRegistrosSalvos = () => {
     if (fCat !== 'todas') tFiltradas = tFiltradas.filter(t => t.categoria === fCat);
     if (fTipo !== 'todos') tFiltradas = tFiltradas.filter(t => t.tipo === fTipo);
 
+    // V2.8: ORDENAÇÃO CRONOLÓGICA PARA CALCULAR O SALDO CORRENTE (Do mais antigo para o mais novo)
+    tFiltradas.sort((a,b) => new Date(a.data) - new Date(b.data));
+
     const grupos = {};
+    let saldoAcumulado = 0; // O nosso cofre acumulativo
+
     tFiltradas.forEach(t => {
         const [a, m] = t.data.split('-');
         const mesAno = `${m}/${a}`;
-        if(!grupos[mesAno]) grupos[mesAno] = [];
-        grupos[mesAno].push(t);
+        
+        if(!grupos[mesAno]) grupos[mesAno] = { trns: [], resultadoMes: 0, saldoFinal: 0 };
+        
+        grupos[mesAno].trns.push(t);
+        grupos[mesAno].resultadoMes += t.valor; // Soma apenas o que aconteceu naquele mês
+        
+        saldoAcumulado += t.valor; // Soma tudo desde o início dos tempos
+        grupos[mesAno].saldoFinal = saldoAcumulado; // Guarda a "fotografia" do saldo no final deste mês
     });
 
     if (Object.keys(grupos).length === 0) {
@@ -341,6 +347,7 @@ window.renderizarRegistrosSalvos = () => {
         return;
     }
 
+    // PARA EXIBIR, ORDENAMOS DO MÊS MAIS RECENTE PARA O MAIS ANTIGO
     const chavesOrdenadas = Object.keys(grupos).sort((a, b) => {
         const [ma, aa] = a.split('/'); const [mb, ab] = b.split('/');
         return new Date(`${ab}-${mb}-01`) - new Date(`${aa}-${ma}-01`);
@@ -351,8 +358,10 @@ window.renderizarRegistrosSalvos = () => {
     
     for (let mesAno of chavesOrdenadas) {
         const [m, a] = mesAno.split('/');
-        let trns = grupos[mesAno];
+        let grupo = grupos[mesAno];
+        let trns = grupo.trns;
         
+        // Aplica a ordenação que o usuário escolheu APENAS visualmente dentro do mês
         trns.sort((itemA, itemB) => {
             if (fOrdem === 'data_desc') return new Date(itemB.data) - new Date(itemA.data);
             if (fOrdem === 'data_asc') return new Date(itemA.data) - new Date(itemB.data);
@@ -363,10 +372,20 @@ window.renderizarRegistrosSalvos = () => {
             return 0;
         });
 
-        let subtotal = trns.reduce((acc, curr) => acc + curr.valor, 0);
-        let corSub = subtotal >= 0 ? '#4caf50' : '#f44336';
+        // Cores de alto contraste para o fundo azul da sanfona
+        let corRes = grupo.resultadoMes >= 0 ? '#81c784' : '#ef5350'; 
+        let corSaldo = grupo.saldoFinal >= 0 ? '#81c784' : '#ef5350';
 
-        htmlS += `<button class="accordion">${mesesNomes[m]} de ${a} <span style="color:${corSub}; font-weight:900;">R$ ${subtotal.toFixed(2)}</span></button>
+        // O NOVO CABEÇALHO DIVIDIDO
+        htmlS += `<button class="accordion" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="flex: 1; min-width: 120px;">${mesesNomes[m]} de ${a}</div>
+                    <div style="font-size: 12px; font-weight: normal; color: #bbdefb; border-right: 1px solid rgba(255,255,255,0.3); padding-right: 15px; margin-right: 5px;">
+                        Mês: <span style="color:${corRes}; font-weight:bold;">R$ ${grupo.resultadoMes.toFixed(2)}</span>
+                    </div>
+                    <div style="font-size: 14px;">
+                        Saldo Final: <span style="color:${corSaldo}; font-weight:900;">R$ ${grupo.saldoFinal.toFixed(2)}</span>
+                    </div>
+                  </button>
                   <div class="accordion-panel">
                     <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0;">
                         <thead>
