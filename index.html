@@ -35,7 +35,7 @@
 
   <div id="toast">✅ Operação realizada!</div>
 
-  <!-- MODAL DE EDIÇÃO -->
+  <!-- MODAL DE EDIÇÃO DE LANÇAMENTOS (AVULSOS) -->
   <div id="modal-editar" class="modal-overlay hidden noprint">
       <div class="form-box" style="width: 90%; max-width: 400px; margin: 0;">
           <h3 style="color:#0d47a1; margin-top:0; border-bottom: 1px solid #eee; padding-bottom:10px;">Editar Lançamento</h3>
@@ -55,6 +55,53 @@
           <div style="display:flex; gap:10px; margin-top:20px;">
               <button class="btn-action" style="background:#78909c;" onclick="document.getElementById('modal-editar').classList.add('hidden')">Cancelar</button>
               <button class="btn-action btn-green" onclick="window.salvarEdicao()">💾 Salvar</button>
+          </div>
+      </div>
+  </div>
+
+  <!-- MODAL DE EDIÇÃO DE CATEGORIAS -->
+  <div id="modal-editar-categoria" class="modal-overlay hidden noprint">
+      <div class="form-box" style="width: 90%; max-width: 400px; margin: 0;">
+          <h3 style="color:#0d47a1; margin-top:0; border-bottom: 1px solid #eee; padding-bottom:10px;">Editar Categoria</h3>
+          <input type="hidden" id="editCatId">
+          <div class="grid-input" style="grid-template-columns: 80px 1fr;">
+              <div>
+                  <label>Emoji:</label>
+                  <select id="editCatEmoji" style="font-size: 16px;">
+                      <option value="🏷️">🏷️ Geral</option>
+                      <option value="💵">💵 Dinheiro/Pix</option>
+                      <option value="🏦">🏦 Rendimento</option>
+                      <option value="🏢">🏢 Salário</option>
+                      <option value="🤝">🤝 Vendas/Acordo</option>
+                      <option value="🪙">🪙 Cripto/Moedas</option>
+                      <option value="📈">📈 Investimentos</option>
+                      <option value="🛒">🛒 Supermercado</option>
+                      <option value="🛍️">🛍️ Compras</option>
+                      <option value="🐶">🐶 Pets/Vet</option>
+                      <option value="📚">📚 Educação</option>
+                      <option value="✈️">✈️ Viagem/Férias</option>
+                      <option value="🚗">🚗 Veículo/Combustível</option>
+                      <option value="🏥">🏥 Saúde/Médico</option>
+                      <option value="💊">💊 Farmácia</option>
+                      <option value="💇‍♀️">💇‍♀️ Beleza</option>
+                      <option value="🏋️">🏋️ Esporte</option>
+                      <option value="🎮">🎮 Jogos</option>
+                      <option value="🎬">🎬 Streaming</option>
+                      <option value="📱">📱 Celular/Internet</option>
+                      <option value="💡">💡 Contas Casa</option>
+                      <option value="💳">💳 Cartão Crédito</option>
+                      <option value="🎁">🎁 Presentes</option>
+                      <option value="👶">👶 Filhos/Crianças</option>
+                      <option value="🛠️">🛠️ Manutenção</option>
+                      <option value="💼">💼 Trabalho</option>
+                  </select>
+              </div>
+              <div><label>Nome:</label><input type="text" id="editCatNome"></div>
+          </div>
+          <p style="font-size: 11px; color: #666; margin-top:10px;">Nota: Alterar o nome não quebra os relatórios de meses anteriores.</p>
+          <div style="display:flex; gap:10px; margin-top:15px;">
+              <button class="btn-action" style="background:#78909c;" onclick="document.getElementById('modal-editar-categoria').classList.add('hidden')">Cancelar</button>
+              <button class="btn-action btn-green" onclick="window.salvarEdicaoCategoria()">💾 Salvar Categoria</button>
           </div>
       </div>
   </div>
@@ -131,30 +178,11 @@
         <div id="painel-registros" class="panel print-area">
             <div class="noprint">
                 <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Filtros e Lançamentos</h3>
-                
                 <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px;">
-                    <!-- BARRA DE FILTROS APRIMORADA -->
                     <div class="grid-input" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
-                        <div>
-                            <label>Banco/Conta:</label>
-                            <select id="filtroConta" onchange="window.renderizarRegistrosSalvos()">
-                                <option value="todas">Todas as Contas</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Categoria:</label>
-                            <select id="filtroCategoria" onchange="window.renderizarRegistrosSalvos()">
-                                <option value="todas">Todas Categorias</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label>Tipo:</label>
-                            <select id="filtroTipo" onchange="window.renderizarRegistrosSalvos()">
-                                <option value="todos">Todos (Entradas/Saídas)</option>
-                                <option value="receita">Apenas Entradas (+)</option>
-                                <option value="despesa">Apenas Saídas (-)</option>
-                            </select>
-                        </div>
+                        <div><label>Banco/Conta:</label><select id="filtroConta" onchange="window.renderizarRegistrosSalvos()"><option value="todas">Todas as Contas</option></select></div>
+                        <div><label>Categoria:</label><select id="filtroCategoria" onchange="window.renderizarRegistrosSalvos()"><option value="todas">Todas Categorias</option></select></div>
+                        <div><label>Tipo:</label><select id="filtroTipo" onchange="window.renderizarRegistrosSalvos()"><option value="todos">Todos (Entradas/Saídas)</option><option value="receita">Apenas Entradas (+)</option><option value="despesa">Apenas Saídas (-)</option></select></div>
                         <div>
                             <label>Ordenar Por:</label>
                             <select id="filtroOrdem" onchange="window.renderizarRegistrosSalvos()">
@@ -166,9 +194,7 @@
                                 <option value="za">Descrição (Z-A)</option>
                             </select>
                         </div>
-                        <div style="display: flex; align-items: flex-end;">
-                            <button class="btn-action btn-green" style="padding: 12px; margin-bottom: 2px; width: 100%;" onclick="window.print()">🖨️ Gerar PDF</button>
-                        </div>
+                        <div style="display: flex; align-items: flex-end;"><button class="btn-action btn-green" style="padding: 12px; margin-bottom: 2px; width: 100%;" onclick="window.print()">🖨️ Gerar PDF</button></div>
                     </div>
                 </div>
             </div>
@@ -209,35 +235,39 @@
             <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Faltou alguma opção no sistema? Crie as suas próprias categorias com emojis nativos da biblioteca.</p>
             <div class="form-box">
                 <h4 style="color: #f57c00; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #ffe0b2; padding-bottom: 5px;">Nova Categoria</h4>
-                <div class="grid-input" style="grid-template-columns: minmax(120px, 1fr) 3fr;">
-                    <!-- BIBLIOTECA DE EMOJIS PRONTA -->
+                <div class="grid-input" style="grid-template-columns: minmax(100px, 1fr) 3fr;">
                     <div>
                         <label>Ícone / Emoji:</label>
                         <select id="cadCatEmoji" style="font-size: 16px;">
                             <option value="🏷️">🏷️ Geral</option>
+                            <option value="💵">💵 Dinheiro/Pix</option>
+                            <option value="🏦">🏦 Rendimento</option>
+                            <option value="🏢">🏢 Salário</option>
+                            <option value="🤝">🤝 Vendas/Acordo</option>
+                            <option value="🪙">🪙 Cripto/Moedas</option>
+                            <option value="📈">📈 Investimentos</option>
                             <option value="🛒">🛒 Supermercado</option>
                             <option value="🛍️">🛍️ Compras</option>
-                            <option value="🐶">🐶 Pets/Veterinário</option>
-                            <option value="📚">📚 Educação/Escola</option>
+                            <option value="🐶">🐶 Pets/Vet</option>
+                            <option value="📚">📚 Educação</option>
                             <option value="✈️">✈️ Viagem/Férias</option>
                             <option value="🚗">🚗 Veículo/Combustível</option>
                             <option value="🏥">🏥 Saúde/Médico</option>
                             <option value="💊">💊 Farmácia</option>
-                            <option value="💇‍♀️">💇‍♀️ Beleza/Estética</option>
-                            <option value="🏋️">🏋️ Academia/Esporte</option>
-                            <option value="🎮">🎮 Jogos/Gamer</option>
-                            <option value="🎬">🎬 Streaming/Cinema</option>
+                            <option value="💇‍♀️">💇‍♀️ Beleza</option>
+                            <option value="🏋️">🏋️ Esporte</option>
+                            <option value="🎮">🎮 Jogos</option>
+                            <option value="🎬">🎬 Streaming</option>
                             <option value="📱">📱 Celular/Internet</option>
-                            <option value="💡">💡 Contas (Luz/Água)</option>
-                            <option value="💳">💳 Cartão de Crédito</option>
+                            <option value="💡">💡 Contas Casa</option>
+                            <option value="💳">💳 Cartão Crédito</option>
                             <option value="🎁">🎁 Presentes</option>
                             <option value="👶">👶 Filhos/Crianças</option>
-                            <option value="🛠️">🛠️ Manutenção/Obras</option>
-                            <option value="📈">📈 Investimentos</option>
-                            <option value="💼">💼 Trabalho/Negócios</option>
+                            <option value="🛠️">🛠️ Manutenção</option>
+                            <option value="💼">💼 Trabalho</option>
                         </select>
                     </div>
-                    <div><label>Nome da Categoria:</label><input type="text" id="cadCatNome" placeholder="Ex: Petshop e Veterinário"></div>
+                    <div><label>Nome da Categoria:</label><input type="text" id="cadCatNome" placeholder="Ex: Rendimento Poupança"></div>
                 </div>
                 <button class="btn-action" style="background-color: #1565c0; margin-top: 15px;" onclick="window.adicionarCategoria()">➕ Adicionar Categoria</button>
             </div>
@@ -253,6 +283,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
   
-  <script type="module" src="app.js?v=2.3"></script>
+  <script type="module" src="app.js?v=2.4"></script>
 </body>
 </html>
