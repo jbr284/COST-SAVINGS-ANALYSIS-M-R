@@ -9,9 +9,8 @@
   <link rel="stylesheet" href="style.css">
 
   <style>
-    /* Estilos específicos para a barra do novo sistema */
     .app-header { background-color: #0a192f; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-    .app-title { font-weight: 900; letter-spacing: 1px; font-size: 18px; text-transform: uppercase; }
+    .app-title { font-weight: 900; letter-spacing: 1px; font-size: 18px; text-transform: uppercase; text-align: center; margin: 0; }
     .subtitle { font-size: 10px; color: #90caf9; letter-spacing: 0.5px; display: block; text-align: center; }
     
     .tabs-container { display: flex; overflow-x: auto; background: #002f6c; border-bottom: 3px solid #1565c0; }
@@ -49,7 +48,7 @@
             <div id="app-title" class="app-title">COST SAVINGS ANALYSIS M&R</div>
             <span class="subtitle">Análise de Economias Martins & Rosa</span>
         </div>
-        <div style="width: 50px;"></div> <!-- Espaçador para alinhar ao centro -->
+        <div style="width: 50px;"></div>
     </div>
 
     <div class="fixed-area">
@@ -65,7 +64,7 @@
         
         <!-- ABA 1: IMPORTAÇÃO -->
         <div id="painel-importacao" class="panel active">
-            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px;">Importar Extrato Bancário</h3>
+            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Importar Extrato Bancário</h3>
             
             <div class="upload-box" onclick="document.getElementById('arquivoExtrato').click()">
                 <div class="upload-icon">📄</div>
@@ -94,9 +93,9 @@
             </div>
         </div>
 
-        <!-- ABA 2: CLASSIFICAÇÃO (A PENEIRA) -->
+        <!-- ABA 2: CLASSIFICAÇÃO -->
         <div id="painel-classificacao" class="panel">
-            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px;">Peneira de Classificação</h3>
+            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Peneira de Classificação</h3>
             <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; color: #666;">
                 Nenhum extrato aguardando classificação no momento.<br>
                 Importe um arquivo OFX ou CSV na aba anterior.
@@ -105,7 +104,7 @@
 
         <!-- ABA 3: DASHBOARD -->
         <div id="painel-dashboard" class="panel">
-            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px;">Evolução de Cost Savings</h3>
+            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Evolução de Cost Savings</h3>
             <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; color: #666;">
                 Os gráficos de despesas vs receitas aparecerão aqui.
             </div>
@@ -113,24 +112,32 @@
 
         <!-- ABA 4: CONFIGURAÇÕES E CONTAS -->
         <div id="painel-configuracoes" class="panel">
-            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px;">Gestão de Contas Internas</h3>
+            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Gestão de Contas e Fontes</h3>
             <p style="font-size: 13px; color: #555; margin-bottom: 20px;">
-                Cadastre aqui os bancos e nomes de titularidade de João Martins e Esposa Rosa. <br>
-                Transferências entre estas contas serão marcadas como <b>"Transferência Interna"</b> e ignoradas no balanço de lucros/despesas.
+                Cadastre aqui os bancos, a titularidade e a principal fonte de receita de cada um. <br>
+                Isso ajuda o sistema a identificar a origem dos recursos e a aplicar as regras de <b>Transferência Interna</b>.
             </p>
             
+            <!-- FORMULÁRIO DE CADASTRO -->
             <div class="form-box">
-                <div class="grid-input" style="grid-template-columns: 1fr 1fr;">
-                    <div><label>Nome no Extrato / Instituição:</label><input type="text" placeholder="Ex: JOAO BATISTA ROSA"></div>
-                    <div><label>Vincular a:</label><select style="padding: 10px; width: 100%; border: 1px solid #ccc; border-radius: 4px;"><option>Conta Principal (João)</option><option>Conta Secundária (Esposa)</option></select></div>
+                <h4 style="color: #f57c00; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #ffe0b2; padding-bottom: 5px;">Nova Conta</h4>
+                <div class="grid-input" style="grid-template-columns: 1fr 1fr 1fr;">
+                    <div><label>Banco:</label><input type="text" id="cadBanco" placeholder="Ex: Bradesco"></div>
+                    <div><label>Conta (Titular):</label><input type="text" id="cadTitular" placeholder="Ex: João B. Rosa"></div>
+                    <div><label>Fonte / Origem:</label><input type="text" id="cadFonte" placeholder="Ex: Rem. Modular"></div>
                 </div>
-                <button class="btn-action btn-green" style="margin-top: 15px;" onclick="alert('Lógica em breve!')">💾 Salvar Regra de Conta</button>
+                <button class="btn-action btn-green" style="margin-top: 15px;" onclick="window.adicionarConta()">💾 Adicionar Conta</button>
             </div>
+
+            <!-- TABELA DE CONTAS CADASTRADAS -->
+            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:20px;">Contas Cadastradas</h3>
+            <div id="lista-contas-container"></div>
+            
         </div>
 
     </div>
   </div>
 
-  <script type="module" src="app.js?v=1.0"></script>
+  <script type="module" src="app.js?v=1.1"></script>
 </body>
 </html>
