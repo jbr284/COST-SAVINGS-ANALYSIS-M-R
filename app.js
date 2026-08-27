@@ -160,7 +160,7 @@ window.renderizarCategoriasConfig = () => {
 };
 
 // ==========================================
-// IMPORTAÇÃO E CAÇADOR
+// IMPORTAÇÃO E CAÇADOR INTELIGENTE (ATUALIZADO V2.6)
 // ==========================================
 function limparMoedaCSV(val) {
     let n = val.toString().replace(/[R\$\s]/gi, '').trim();
@@ -179,13 +179,20 @@ window.processarArquivo = (event) => {
         return;
     }
     const ext = file.name.split('.').pop().toLowerCase();
+    
+    window.mostrarToast(`Lendo arquivo ${ext.toUpperCase()}...`);
     const reader = new FileReader();
+    
     reader.onload = (e) => {
         if (ext === 'ofx') window.processarOFX(e.target.result, contaId);
         else if (ext === 'csv') window.processarCSV(e.target.result, contaId);
         document.getElementById('arquivoExtrato').value = ''; 
     };
-    reader.readAsText(file, 'ISO-8859-1'); 
+
+    // A mágica da codificação: Arquivos CSV modernos (como a Flash) usam UTF-8. 
+    // Arquivos OFX usam ISO-8859-1.
+    const encoding = ext === 'csv' ? 'UTF-8' : 'ISO-8859-1';
+    reader.readAsText(file, encoding);
 };
 
 window.processarOFX = (ofx, contaId) => {
@@ -216,27 +223,50 @@ window.processarCSV = (csv, contaId) => {
         res.data.forEach((cols, i) => {
             if (cols.length < 2) return; 
             let data = "", vals = [], descArr = [];
+            
             cols.forEach(col => {
                 if(typeof col !== 'string') return;
-                let cl = col.trim();
+                // Substitui traços esquisitos do Windows/Mac por hífens normais
+                let cl = col.trim().replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-');
+                if(!cl) return;
+
+                // Tenta achar a Data
                 let dM = cl.match(/^(\d{2}\/\d{2}\/\d{2,4}|\d{4}-\d{2}-\d{2})/);
                 if (!data && dM) { data = dM[1]; return; }
-                if (cl.match(/^-?\s*(R\$)?\s*\d{1,3}(\.?\d{3})*,\d{2}$/) || cl.match(/^-?\s*(R\$)?\s*\d+(\.\d{2})$/)) {
-                    let v = limparMoedaCSV(cl); if (v !== 0) vals.push(v); return;
+
+                // Tenta achar o Valor (Ignorando espaços para ler "-R$ 94,00")
+                let numCheck = cl.replace(/\s/g, '').toUpperCase();
+                if (numCheck.match(/^-?(R\$|BRL)?\d{1,3}(\.?\d{3})*,\d{2}$/) || numCheck.match(/^-?(R\$|BRL)?\d+(\.\d{2})$/)) {
+                    let v = limparMoedaCSV(cl); 
+                    if (v !== 0) vals.push(v); 
+                    return;
                 }
+
+                // O que sobra vai para a lista de descrição
                 if (!cl.match(/^[0-9\-\.]+$/) && cl !== '') descArr.push(cl);
             });
+
             if (data && vals.length > 0) {
-                if (descArr.some(d => ['SALDO','HISTÓRICO'].includes(d.toUpperCase()))) return;
+                // Checa se é a linha de cabeçalho
+                if (descArr.some(d => ['SALDO','HISTÓRICO','DATA','VALOR'].includes(d.toUpperCase()))) return;
+                
                 let valor = vals[0];
-                descArr = descArr.filter(d => !['Aprovado','Concluído','Saldo'].includes(d));
+                
+                // Limpa palavras comuns dos bancos (Incluindo a palavra Cartão da Flash)
+                descArr = descArr.filter(d => !['Aprovado','Concluído','Saldo','Cartão'].includes(d));
+                
+                // Remove campos que parecem com relógios (ex: 11:36 ou 14:35:00)
+                descArr = descArr.filter(d => !d.match(/^\d{1,2}:\d{2}(:\d{2})?$/));
+                
                 let desc = descArr.sort((a,b)=>b.length - a.length)[0] || "Sem descrição";
+                
                 let dF = data;
                 if (data.includes('/')) {
                     let p = data.split('/');
                     if(p[2].length === 2) p[2] = "20"+p[2];
                     dF = `${p[2]}-${p[1]}-${p[0]}`;
                 }
+                
                 window.transacoesPendentes.push({
                     id: `TEMP-${Date.now()}-${i}`, data: dF, descricao: desc.substring(0,50),
                     valor: valor, tipo: valor < 0 ? 'despesa' : 'receita', categoria: autoCategorizar(desc), contaOrigem: contaId
@@ -258,16 +288,17 @@ function finalizarImportacao() {
     if (window.transacoesPendentes.length > 0) {
         window.mudarAba('registros'); 
         window.renderizarRegistrosSalvos();
-    } else alert("Nenhuma transação válida encontrada.");
+    } else alert("O arquivo foi lido, mas nenhuma transação válida foi encontrada (pode ser problema no formato).");
 }
 
 // ==========================================
-// REGISTROS E FILTROS
+// REGISTROS (COM ORDENAÇÃO E FILTRO DE CONTA)
 // ==========================================
 window.renderizarRegistrosSalvos = () => {
     const containerSanfona = document.getElementById('area-sanfonas');
     const containerPend = document.getElementById('area-pendentes');
     
+    // PENDENTES
     if (window.transacoesPendentes.length > 0) {
         let htmlP = `<div style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
             <h4 style="color: #d84315; margin-top:0;">⚠️ ${window.transacoesPendentes.length} Lançamentos Pendentes</h4>
@@ -290,6 +321,7 @@ window.renderizarRegistrosSalvos = () => {
         containerPend.innerHTML = "";
     }
 
+    // APLICAR FILTROS
     let tFiltradas = [...window.transacoes];
     const fConta = document.getElementById('filtroConta').value;
     const fCat = document.getElementById('filtroCategoria').value;
@@ -300,6 +332,7 @@ window.renderizarRegistrosSalvos = () => {
     if (fCat !== 'todas') tFiltradas = tFiltradas.filter(t => t.categoria === fCat);
     if (fTipo !== 'todos') tFiltradas = tFiltradas.filter(t => t.tipo === fTipo);
 
+    // AGRUPAR POR MÊS/ANO
     const grupos = {};
     tFiltradas.forEach(t => {
         const [a, m] = t.data.split('-');
@@ -596,7 +629,6 @@ window.renderizarDashboard = () => {
         </div>
     `;
 
-    // ARRAY DE CORES DE ALTO CONTRASTE (Para evitar confusão visual)
     const coresDistintas = [
         '#e53935', '#1e88e5', '#43a047', '#ffb300', '#8e24aa', 
         '#00acc1', '#d81b60', '#f4511e', '#7cb342', '#3949ab', 
@@ -620,8 +652,8 @@ window.renderizarDashboard = () => {
                     datasets: [{ 
                         data: dts, 
                         backgroundColor: coresDistintas, 
-                        borderWidth: 2,           // Borda mais grossa
-                        borderColor: '#ffffff'    // Borda branca para separar bem as cores
+                        borderWidth: 2,           
+                        borderColor: '#ffffff'    
                     }] 
                 },
                 options: { 
