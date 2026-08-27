@@ -23,7 +23,6 @@ window.categoriasExtras = [];
 window.transacoesPendentes = []; 
 let chartInstance = null; 
 
-// CATEGORIAS FIXAS
 const CATEGORIAS_PADRAO = [
     {v: 'classificar', l: '⚠️ A Classificar'},
     {v: 'transferencia_interna', l: '🔄 Transferência Interna'},
@@ -77,12 +76,14 @@ window.adicionarCategoria = async () => {
     const nome = document.getElementById('cadCatNome').value.trim();
     if(!nome) return alert("Preencha o nome da categoria.");
     
+    // Cria um ID imutável baseado no nome original
     const valorID = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
     const labelVisual = `${emoji} ${nome}`;
     
     if(getTodasCategorias().find(c => c.v === valorID)) return alert("Esta categoria já existe!");
 
-    const novaCat = { id: `CAT-${Date.now()}`, v: valorID, l: labelVisual };
+    // Adicionado os campos 'emoji' e 'nome' separados para facilitar a edição futura
+    const novaCat = { id: `CAT-${Date.now()}`, v: valorID, l: labelVisual, emoji: emoji, nome: nome };
     
     try {
         await setDoc(doc(db, "banco_categorias", novaCat.id), novaCat);
@@ -107,6 +108,51 @@ window.excluirCategoria = async (id) => {
     } catch(e) {}
 };
 
+// --- ABRIR MODAL EDIÇÃO CATEGORIA ---
+window.abrirModalEdicaoCategoria = (id) => {
+    const c = window.categoriasExtras.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('editCatId').value = c.id;
+    
+    if (c.nome && c.emoji) {
+        document.getElementById('editCatEmoji').value = c.emoji;
+        document.getElementById('editCatNome').value = c.nome;
+    } else {
+        // Fallback caso a categoria seja antiga e não tenha nome/emoji separados
+        const espaco = c.l.indexOf(' ');
+        document.getElementById('editCatEmoji').value = c.l.substring(0, espaco) || '🏷️';
+        document.getElementById('editCatNome').value = c.l.substring(espaco + 1);
+    }
+    document.getElementById('modal-editar-categoria').classList.remove('hidden');
+};
+
+// --- SALVAR EDIÇÃO CATEGORIA (PROTEGENDO O ID INTERNO) ---
+window.salvarEdicaoCategoria = async () => {
+    const id = document.getElementById('editCatId').value;
+    const emoji = document.getElementById('editCatEmoji').value || '🏷️';
+    const nome = document.getElementById('editCatNome').value.trim();
+    
+    if (!nome) return alert("Preencha o nome da categoria.");
+    const labelVisual = `${emoji} ${nome}`;
+    
+    try {
+        // Atualiza apenas os nomes, NÃO ATUALIZA o "c.v" para não quebrar relatórios antigos
+        await updateDoc(doc(db, "banco_categorias", id), { l: labelVisual, emoji: emoji, nome: nome });
+        const c = window.categoriasExtras.find(x => x.id === id);
+        if (c) {
+            c.l = labelVisual;
+            c.emoji = emoji;
+            c.nome = nome;
+        }
+        document.getElementById('modal-editar-categoria').classList.add('hidden');
+        window.renderizarCategoriasConfig();
+        window.renderizarFiltroCategoria();
+        window.renderizarRegistrosSalvos();
+        window.renderizarDashboard();
+        window.mostrarToast("Categoria Atualizada!");
+    } catch (e) { alert("Erro ao editar categoria."); }
+};
+
 window.renderizarCategoriasConfig = () => {
     const div = document.getElementById('lista-categorias-container');
     if(!div) return;
@@ -117,7 +163,10 @@ window.renderizarCategoriasConfig = () => {
     div.innerHTML = window.categoriasExtras.map(c => 
         `<div style="background:white; padding:10px 15px; margin-bottom:5px; border:1px solid #ccc; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-weight:bold; color:#1565c0;">${c.l}</span>
-            <button class="btn-icon" style="color:#d32f2f; background:none; border:none; cursor:pointer; font-size:16px;" onclick="window.excluirCategoria('${c.id}')">🗑️</button>
+            <div>
+                <button class="btn-icon" style="color:#1565c0; background:none; border:none; cursor:pointer; font-size:16px; margin-right: 10px;" onclick="window.abrirModalEdicaoCategoria('${c.id}')" title="Editar">✏️</button>
+                <button class="btn-icon" style="color:#d32f2f; background:none; border:none; cursor:pointer; font-size:16px;" onclick="window.excluirCategoria('${c.id}')" title="Excluir">🗑️</button>
+            </div>
         </div>`
     ).join('');
 };
@@ -126,13 +175,6 @@ window.renderizarCategoriasConfig = () => {
 // ==========================================
 // IMPORTAÇÃO E CAÇADOR
 // ==========================================
-function autoCategorizar(desc) {
-    if(!desc) return 'classificar';
-    const dUpper = desc.toUpperCase();
-    for (let r of window.regras) { if (dUpper.includes(r.palavra_chave)) return r.categoria; }
-    return 'classificar'; 
-}
-
 function limparMoedaCSV(val) {
     let n = val.toString().replace(/[R\$\s]/gi, '').trim();
     if (n.includes('.') && n.includes(',')) n = n.replace(/\./g, '').replace(',', '.');
@@ -280,7 +322,6 @@ window.renderizarRegistrosSalvos = () => {
         return;
     }
 
-    // ORDENAR OS GRUPOS (Para que os meses mais recentes fiquem no topo)
     const chavesOrdenadas = Object.keys(grupos).sort((a, b) => {
         const [ma, aa] = a.split('/'); const [mb, ab] = b.split('/');
         return new Date(`${ab}-${mb}-01`) - new Date(`${aa}-${ma}-01`);
@@ -289,12 +330,10 @@ window.renderizarRegistrosSalvos = () => {
     const mesesNomes = {'01':'Janeiro','02':'Fevereiro','03':'Março','04':'Abril','05':'Maio','06':'Junho','07':'Julho','08':'Agosto','09':'Setembro','10':'Outubro','11':'Novembro','12':'Dezembro'};
     let htmlS = "";
     
-    // GERAR SANFONAS COM ORDENAÇÃO INTERNA
     for (let mesAno of chavesOrdenadas) {
         const [m, a] = mesAno.split('/');
         let trns = grupos[mesAno];
         
-        // APLICAR ORDENAÇÃO ESCOLHIDA (Dentro do Mês)
         trns.sort((itemA, itemB) => {
             if (fOrdem === 'data_desc') return new Date(itemB.data) - new Date(itemA.data);
             if (fOrdem === 'data_asc') return new Date(itemA.data) - new Date(itemB.data);
@@ -390,7 +429,7 @@ window.salvarExtratoReal = async () => {
 };
 
 // ==========================================
-// SEGURANÇA E EDIÇÃO
+// SEGURANÇA E EDIÇÃO DE LANÇAMENTOS
 // ==========================================
 window.recategorizarInline = async (id, selectEl, oldCat) => {
     const novaCat = selectEl.value;
