@@ -131,25 +131,43 @@
         <div id="painel-registros" class="panel print-area">
             <div class="noprint">
                 <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Filtros e Lançamentos</h3>
+                
                 <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px;">
-                    <div class="grid-input" style="grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <!-- BARRA DE FILTROS APRIMORADA -->
+                    <div class="grid-input" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
                         <div>
-                            <label>Filtrar por Categoria:</label>
-                            <!-- O JS vai popular isso aqui dinamicamente -->
-                            <select id="filtroCategoria" onchange="window.renderizarRegistrosSalvos()">
-                                <option value="todas">Todas as Categorias</option>
+                            <label>Banco/Conta:</label>
+                            <select id="filtroConta" onchange="window.renderizarRegistrosSalvos()">
+                                <option value="todas">Todas as Contas</option>
                             </select>
                         </div>
                         <div>
-                            <label>Filtrar por Tipo:</label>
+                            <label>Categoria:</label>
+                            <select id="filtroCategoria" onchange="window.renderizarRegistrosSalvos()">
+                                <option value="todas">Todas Categorias</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Tipo:</label>
                             <select id="filtroTipo" onchange="window.renderizarRegistrosSalvos()">
-                                <option value="todos">Todos (Entradas e Saídas)</option>
+                                <option value="todos">Todos (Entradas/Saídas)</option>
                                 <option value="receita">Apenas Entradas (+)</option>
                                 <option value="despesa">Apenas Saídas (-)</option>
                             </select>
                         </div>
+                        <div>
+                            <label>Ordenar Por:</label>
+                            <select id="filtroOrdem" onchange="window.renderizarRegistrosSalvos()">
+                                <option value="data_desc">Data (Mais Novos)</option>
+                                <option value="data_asc">Data (Mais Antigos)</option>
+                                <option value="valor_desc">Valor (Maior p/ Menor)</option>
+                                <option value="valor_asc">Valor (Menor p/ Maior)</option>
+                                <option value="az">Descrição (A-Z)</option>
+                                <option value="za">Descrição (Z-A)</option>
+                            </select>
+                        </div>
                         <div style="display: flex; align-items: flex-end;">
-                            <button class="btn-action btn-green" style="padding: 12px; margin-bottom: 2px; width: 100%;" onclick="window.print()">🖨️ Exportar PDF</button>
+                            <button class="btn-action btn-green" style="padding: 12px; margin-bottom: 2px; width: 100%;" onclick="window.print()">🖨️ Gerar PDF</button>
                         </div>
                     </div>
                 </div>
@@ -172,7 +190,6 @@
 
         <!-- ABA 4: CONFIGURAÇÕES -->
         <div id="painel-configuracoes" class="panel noprint">
-            <!-- BLOCO 1: CONTAS -->
             <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Gestão de Contas e Fontes</h3>
             <div class="form-box">
                 <h4 style="color: #f57c00; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #ffe0b2; padding-bottom: 5px;">Nova Conta</h4>
@@ -188,13 +205,38 @@
             
             <hr style="margin: 40px 0 30px 0; border: 0; border-top: 2px dashed #ccc;">
 
-            <!-- BLOCO 2: CATEGORIAS EXTRAS -->
             <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Gestão de Categorias Customizadas</h3>
-            <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Faltou alguma opção no sistema? Crie as suas próprias categorias de despesa ou receita aqui.</p>
+            <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Faltou alguma opção no sistema? Crie as suas próprias categorias com emojis nativos da biblioteca.</p>
             <div class="form-box">
                 <h4 style="color: #f57c00; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #ffe0b2; padding-bottom: 5px;">Nova Categoria</h4>
-                <div class="grid-input" style="grid-template-columns: 80px 1fr;">
-                    <div><label>Emoji:</label><input type="text" id="cadCatEmoji" placeholder="Ex: 🐶"></div>
+                <div class="grid-input" style="grid-template-columns: minmax(120px, 1fr) 3fr;">
+                    <!-- BIBLIOTECA DE EMOJIS PRONTA -->
+                    <div>
+                        <label>Ícone / Emoji:</label>
+                        <select id="cadCatEmoji" style="font-size: 16px;">
+                            <option value="🏷️">🏷️ Geral</option>
+                            <option value="🛒">🛒 Supermercado</option>
+                            <option value="🛍️">🛍️ Compras</option>
+                            <option value="🐶">🐶 Pets/Veterinário</option>
+                            <option value="📚">📚 Educação/Escola</option>
+                            <option value="✈️">✈️ Viagem/Férias</option>
+                            <option value="🚗">🚗 Veículo/Combustível</option>
+                            <option value="🏥">🏥 Saúde/Médico</option>
+                            <option value="💊">💊 Farmácia</option>
+                            <option value="💇‍♀️">💇‍♀️ Beleza/Estética</option>
+                            <option value="🏋️">🏋️ Academia/Esporte</option>
+                            <option value="🎮">🎮 Jogos/Gamer</option>
+                            <option value="🎬">🎬 Streaming/Cinema</option>
+                            <option value="📱">📱 Celular/Internet</option>
+                            <option value="💡">💡 Contas (Luz/Água)</option>
+                            <option value="💳">💳 Cartão de Crédito</option>
+                            <option value="🎁">🎁 Presentes</option>
+                            <option value="👶">👶 Filhos/Crianças</option>
+                            <option value="🛠️">🛠️ Manutenção/Obras</option>
+                            <option value="📈">📈 Investimentos</option>
+                            <option value="💼">💼 Trabalho/Negócios</option>
+                        </select>
+                    </div>
                     <div><label>Nome da Categoria:</label><input type="text" id="cadCatNome" placeholder="Ex: Petshop e Veterinário"></div>
                 </div>
                 <button class="btn-action" style="background-color: #1565c0; margin-top: 15px;" onclick="window.adicionarCategoria()">➕ Adicionar Categoria</button>
@@ -211,6 +253,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
   
-  <script type="module" src="app.js?v=2.2"></script>
+  <script type="module" src="app.js?v=2.3"></script>
 </body>
 </html>
