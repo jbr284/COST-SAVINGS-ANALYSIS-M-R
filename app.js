@@ -108,7 +108,7 @@ window.renderizarContas = () => {
 };
 
 // ==========================================
-// INTELIGÊNCIA: DESCOBRIR CATEGORIA
+// INTELIGÊNCIA: DESCOBRIR CATEGORIA E LIMPAR DADOS
 // ==========================================
 function autoCategorizar(descricaoBanco) {
     const descUpper = descricaoBanco.toUpperCase();
@@ -117,12 +117,12 @@ function autoCategorizar(descricaoBanco) {
             return regra.categoria;
         }
     }
-    return 'classificar'; // Se não souber, manda para o usuário decidir
+    return 'classificar'; 
 }
 
 function limparMoedaCSV(val) {
     if (!val) return 0;
-    let numStr = val.replace(/R\$/g, '').trim();
+    let numStr = val.toString().replace(/[R\$\s]/gi, '').trim();
     if (numStr.includes('.') && numStr.includes(',')) {
         numStr = numStr.replace(/\./g, '').replace(',', '.');
     } else if (numStr.includes(',')) {
@@ -132,7 +132,7 @@ function limparMoedaCSV(val) {
 }
 
 // ==========================================
-// MOTOR DE LEITURA HÍBRIDO (OFX E CSV)
+// MOTOR DE LEITURA HÍBRIDO (OFX E CSV COM PAPA PARSE)
 // ==========================================
 window.processarArquivo = (event) => {
     const file = event.target.files[0];
@@ -202,50 +202,68 @@ window.processarOFX = (ofxString, contaId) => {
 
 window.processarCSV = (csvString, contaId) => {
     window.transacoesPendentes = [];
-    const linhas = csvString.split('\n');
-    const separador = csvString.indexOf(';') > -1 ? ';' : ',';
+    
+    Papa.parse(csvString, {
+        skipEmptyLines: true,
+        complete: function(results) {
+            const linhas = results.data;
 
-    linhas.forEach((linha, i) => {
-        if (!linha.trim() || linha.toLowerCase().includes('data')) return; // ignora cabeçalho
-        const colunas = linha.split(separador);
-        
-        if (colunas.length >= 3) {
-            let data = "", valor = 0, desc = "";
-            
-            colunas.forEach(col => {
-                let colLimpa = col.replace(/"/g, '').trim();
-                
-                if (colLimpa.match(/^\d{2}\/\d{2}\/\d{4}$/)) { data = colLimpa; } 
-                else if (colLimpa.match(/^\d{4}-\d{2}-\d{2}$/)) { data = colLimpa; }
-                else if (colLimpa.match(/^-?\d+([\.,]\d+)?$/) && colLimpa !== data && valor === 0) {
-                    valor = limparMoedaCSV(colLimpa);
-                } else {
-                    if (colLimpa && colLimpa.length > desc.length && !colLimpa.match(/^[0-9]+$/)) desc = colLimpa;
+            linhas.forEach((colunas, i) => {
+                if (colunas.length < 2) return; 
+
+                let data = "";
+                let valor = 0;
+                let desc = "";
+                let valorEncontrado = false;
+
+                colunas.forEach(col => {
+                    if (typeof col !== 'string') return;
+                    let colLimpa = col.trim();
+
+                    if (!data && (colLimpa.match(/^\d{2}\/\d{2}\/\d{4}/) || colLimpa.match(/^\d{4}-\d{2}-\d{2}/))) {
+                        data = colLimpa.substring(0, 10);
+                    } 
+                    else if (!valorEncontrado && colLimpa.match(/^-?R?\s*\$?\s*\d{1,3}(\.?\d{3})*,\d{2}$|^-?\d+(\.\d+)?$/)) {
+                        let vTemp = limparMoedaCSV(colLimpa);
+                        if (vTemp !== 0) {
+                            valor = vTemp;
+                            valorEncontrado = true;
+                        }
+                    } 
+                    else {
+                        if (colLimpa && colLimpa.length > desc.length && !colLimpa.match(/^[0-9]+$/)) {
+                            desc = colLimpa;
+                        }
+                    }
+                });
+
+                if (data && valorEncontrado) {
+                    let dataFmt = data;
+                    if (data.includes('/')) {
+                        const parts = data.split('/');
+                        dataFmt = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+
+                    const categoriaIA = autoCategorizar(desc);
+
+                    window.transacoesPendentes.push({
+                        id: `TEMP-${Date.now()}-${i}`,
+                        data: dataFmt,
+                        descricao: desc || "Sem descrição",
+                        valor: valor,
+                        tipo: valor < 0 ? 'despesa' : 'receita',
+                        categoria: categoriaIA,
+                        contaOrigem: contaId
+                    });
                 }
             });
-
-            if (data && valor !== 0) {
-                let dataFmt = data;
-                if (data.includes('/')) {
-                    const parts = data.split('/');
-                    dataFmt = `${parts[2]}-${parts[1]}-${parts[0]}`;
-                }
-                
-                const categoriaIA = autoCategorizar(desc);
-
-                window.transacoesPendentes.push({
-                    id: `TEMP-${Date.now()}-${i}`,
-                    data: dataFmt,
-                    descricao: desc,
-                    valor: valor,
-                    tipo: valor < 0 ? 'despesa' : 'receita',
-                    categoria: categoriaIA,
-                    contaOrigem: contaId
-                });
-            }
+            
+            finalizarImportacao();
+        },
+        error: function(error) {
+            alert("Erro ao ler o CSV: " + error.message);
         }
     });
-    finalizarImportacao();
 };
 
 function finalizarImportacao() {
@@ -254,7 +272,7 @@ function finalizarImportacao() {
         window.mudarAba('classificacao');
         window.renderizarClassificacao();
     } else {
-        alert("Não foi possível encontrar transações válidas neste arquivo.");
+        alert("Não foi possível encontrar transações válidas neste arquivo CSV/OFX.");
     }
 }
 
@@ -272,7 +290,7 @@ window.renderizarClassificacao = () => {
     window.transacoesPendentes.sort((a, b) => new Date(a.data) - new Date(b.data));
     
     const contaSelecionada = window.contas.find(c => c.id === window.transacoesPendentes[0].contaOrigem);
-    const nomeConta = contaSelecionada ? contaSelecionada.banco : 'Desconhecida';
+    const nomeConta = contaSelecionada ? `${contaSelecionada.banco} - ${contaSelecionada.titular}` : 'Desconhecida';
     
     let htmlTabela = `
         <h4 style="color: #f57c00; text-align:left; margin-bottom: 15px;">Extrato da conta: <b>${nomeConta}</b></h4>
@@ -326,14 +344,15 @@ window.renderizarClassificacao = () => {
     container.innerHTML = htmlTabela;
 };
 
-// --- A MAGIA DE SALVAR E APRENDER ---
 window.salvarExtratoReal = async () => {
     const rows = document.querySelectorAll('#tabela-classificacao tbody tr');
     let salvas = 0;
     
     const btn = document.querySelector('#painel-classificacao .btn-green');
-    btn.innerText = "Salvando e Aprendendo...";
-    btn.disabled = true;
+    if(btn) {
+        btn.innerText = "Salvando e Aprendendo...";
+        btn.disabled = true;
+    }
 
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
@@ -344,7 +363,6 @@ window.salvarExtratoReal = async () => {
         if (t) {
             t.categoria = selectCat;
 
-            // 1. Salva a transação oficial
             const novoId = `TRN-${Date.now()}-${Math.floor(Math.random()*1000)}`;
             const trnDB = {
                 id: novoId,
@@ -360,7 +378,6 @@ window.salvarExtratoReal = async () => {
             window.transacoes.push(trnDB);
             salvas++;
 
-            // 2. Aprende a Regra (se o usuário escolheu uma categoria válida)
             if (selectCat !== 'classificar') {
                 const chave = t.descricao.trim().toUpperCase();
                 const regraExiste = window.regras.find(r => r.palavra_chave === chave);
@@ -377,8 +394,6 @@ window.salvarExtratoReal = async () => {
     window.mostrarToast(`${salvas} transações salvas e aprendidas!`);
     window.transacoesPendentes = [];
     window.renderizarClassificacao();
-    
-    // Manda para o dashboard (será o nosso próximo passo!)
     window.mudarAba('dashboard');
 };
 
