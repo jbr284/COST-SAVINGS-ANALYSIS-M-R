@@ -2,7 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, getDocs, getDoc, setDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Mantemos o mesmo banco de dados, mas vamos usar coleções (tabelas) novas
+// Conexão com o seu Firebase atual (apenas vamos usar coleções novas)
 const firebaseConfig = {
   apiKey: "AIzaSyCNHOPKa320_cY0KUY8vBVVYRmcYkmWo0Y",
   authDomain: "bd-saripan.firebaseapp.com",
@@ -19,14 +19,50 @@ const db = getFirestore(app);
 window.db = db;
 
 // ==========================================
+// VARIÁVEIS DE MEMÓRIA (O NOSSO NOVO DB)
+// ==========================================
+window.transacoes = []; // Guarda os extratos lidos e confirmados
+window.regras = [];     // Guarda a IA de categorização (ex: "IFOOD" = "Alimentação")
+window.contas = [];     // Guarda as contas para a regra de Transferência Interna
+
+// ==========================================
+// INICIALIZAÇÃO E LEITURA DO FIREBASE
+// ==========================================
+window.carregarTodosOsDados = async () => {
+    try {
+        // 1. Carrega as Contas Internas
+        const snapContas = await getDocs(collection(db, "banco_contas"));
+        window.contas = snapContas.docs.map(d => d.data());
+
+        // 2. Carrega as Regras de Categoria
+        const snapRegras = await getDocs(collection(db, "banco_regras"));
+        window.regras = snapRegras.docs.map(d => d.data());
+
+        // 3. Carrega o Histórico de Extratos
+        const snapTransacoes = await getDocs(collection(db, "banco_transacoes"));
+        window.transacoes = snapTransacoes.docs.map(d => d.data());
+
+        console.log("DB Sincronizado:", { 
+            contas: window.contas.length, 
+            regras: window.regras.length, 
+            transacoes: window.transacoes.length 
+        });
+
+        // No futuro, chamaremos a renderização da tela de Dashboard e Configurações aqui
+        
+    } catch (e) { 
+        console.error("Erro ao carregar o Banco de Dados: ", e); 
+        window.mostrarToast("Erro de sincronização.");
+    }
+};
+
+// ==========================================
 // CONTROLE DE NAVEGAÇÃO (ABAS)
 // ==========================================
 window.mudarAba = (aba) => {
-    // Esconde todos os painéis e remove o "active" dos botões
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     
-    // Mostra o painel correto e marca o botão correspondente
     const panel = document.getElementById(`painel-${aba}`);
     const btn = document.getElementById(`btn-tab-${aba}`);
     
@@ -42,10 +78,9 @@ window.processarArquivo = (event) => {
     if (!file) return;
     
     const extensao = file.name.split('.').pop().toLowerCase();
+    window.mostrarToast(`Arquivo ${extensao.toUpperCase()} detectado. Preparando motor...`);
     
-    window.mostrarToast(`Arquivo ${extensao.toUpperCase()} detectado. Preparando motor de leitura...`);
-    
-    // Na próxima fase, aqui entrará o Leitor de OFX e CSV!
+    // Na próxima fase, a inteligência de ler OFX/CSV vai entrar aqui!
     setTimeout(() => {
         window.mudarAba('classificacao');
     }, 1500);
@@ -84,15 +119,24 @@ window.mostrarToast = (msg) => {
     setTimeout(() => t.classList.remove('show'), 3000); 
 };
 
-// Fica escutando se o usuário está logado
+// ==========================================
+// MONITOR DE ESTADO DO USUÁRIO
+// ==========================================
 onAuthStateChanged(auth, (user) => {
     if (user) { 
         document.getElementById('tela-login').classList.add('hidden'); 
         document.getElementById('app').classList.remove('hidden'); 
-        // Na próxima fase, aqui vamos colocar a função: carregarRegrasETransacoes()
+        
+        // Puxa as informações do banco de dados quando entra!
+        window.carregarTodosOsDados();
     } 
     else { 
         document.getElementById('tela-login').classList.remove('hidden'); 
         document.getElementById('app').classList.add('hidden'); 
+        
+        // Limpa a memória por segurança
+        window.transacoes = [];
+        window.regras = [];
+        window.contas = [];
     }
 });
