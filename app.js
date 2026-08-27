@@ -76,13 +76,11 @@ window.adicionarCategoria = async () => {
     const nome = document.getElementById('cadCatNome').value.trim();
     if(!nome) return alert("Preencha o nome da categoria.");
     
-    // Cria um ID imutável baseado no nome original
     const valorID = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
     const labelVisual = `${emoji} ${nome}`;
     
     if(getTodasCategorias().find(c => c.v === valorID)) return alert("Esta categoria já existe!");
 
-    // Adicionado os campos 'emoji' e 'nome' separados para facilitar a edição futura
     const novaCat = { id: `CAT-${Date.now()}`, v: valorID, l: labelVisual, emoji: emoji, nome: nome };
     
     try {
@@ -108,17 +106,14 @@ window.excluirCategoria = async (id) => {
     } catch(e) {}
 };
 
-// --- ABRIR MODAL EDIÇÃO CATEGORIA ---
 window.abrirModalEdicaoCategoria = (id) => {
     const c = window.categoriasExtras.find(x => x.id === id);
     if (!c) return;
     document.getElementById('editCatId').value = c.id;
-    
     if (c.nome && c.emoji) {
         document.getElementById('editCatEmoji').value = c.emoji;
         document.getElementById('editCatNome').value = c.nome;
     } else {
-        // Fallback caso a categoria seja antiga e não tenha nome/emoji separados
         const espaco = c.l.indexOf(' ');
         document.getElementById('editCatEmoji').value = c.l.substring(0, espaco) || '🏷️';
         document.getElementById('editCatNome').value = c.l.substring(espaco + 1);
@@ -126,24 +121,17 @@ window.abrirModalEdicaoCategoria = (id) => {
     document.getElementById('modal-editar-categoria').classList.remove('hidden');
 };
 
-// --- SALVAR EDIÇÃO CATEGORIA (PROTEGENDO O ID INTERNO) ---
 window.salvarEdicaoCategoria = async () => {
     const id = document.getElementById('editCatId').value;
     const emoji = document.getElementById('editCatEmoji').value || '🏷️';
     const nome = document.getElementById('editCatNome').value.trim();
-    
     if (!nome) return alert("Preencha o nome da categoria.");
     const labelVisual = `${emoji} ${nome}`;
     
     try {
-        // Atualiza apenas os nomes, NÃO ATUALIZA o "c.v" para não quebrar relatórios antigos
         await updateDoc(doc(db, "banco_categorias", id), { l: labelVisual, emoji: emoji, nome: nome });
         const c = window.categoriasExtras.find(x => x.id === id);
-        if (c) {
-            c.l = labelVisual;
-            c.emoji = emoji;
-            c.nome = nome;
-        }
+        if (c) { c.l = labelVisual; c.emoji = emoji; c.nome = nome; }
         document.getElementById('modal-editar-categoria').classList.add('hidden');
         window.renderizarCategoriasConfig();
         window.renderizarFiltroCategoria();
@@ -170,7 +158,6 @@ window.renderizarCategoriasConfig = () => {
         </div>`
     ).join('');
 };
-
 
 // ==========================================
 // IMPORTAÇÃO E CAÇADOR
@@ -260,6 +247,13 @@ window.processarCSV = (csv, contaId) => {
     }});
 };
 
+function autoCategorizar(desc) {
+    if(!desc) return 'classificar';
+    const dUpper = desc.toUpperCase();
+    for (let r of window.regras) { if (dUpper.includes(r.palavra_chave)) return r.categoria; }
+    return 'classificar'; 
+}
+
 function finalizarImportacao() {
     if (window.transacoesPendentes.length > 0) {
         window.mudarAba('registros'); 
@@ -268,13 +262,12 @@ function finalizarImportacao() {
 }
 
 // ==========================================
-// REGISTROS (COM ORDENAÇÃO E FILTRO DE CONTA)
+// REGISTROS E FILTROS
 // ==========================================
 window.renderizarRegistrosSalvos = () => {
     const containerSanfona = document.getElementById('area-sanfonas');
     const containerPend = document.getElementById('area-pendentes');
     
-    // PENDENTES
     if (window.transacoesPendentes.length > 0) {
         let htmlP = `<div style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
             <h4 style="color: #d84315; margin-top:0;">⚠️ ${window.transacoesPendentes.length} Lançamentos Pendentes</h4>
@@ -297,7 +290,6 @@ window.renderizarRegistrosSalvos = () => {
         containerPend.innerHTML = "";
     }
 
-    // APLICAR FILTROS
     let tFiltradas = [...window.transacoes];
     const fConta = document.getElementById('filtroConta').value;
     const fCat = document.getElementById('filtroCategoria').value;
@@ -308,7 +300,6 @@ window.renderizarRegistrosSalvos = () => {
     if (fCat !== 'todas') tFiltradas = tFiltradas.filter(t => t.categoria === fCat);
     if (fTipo !== 'todos') tFiltradas = tFiltradas.filter(t => t.tipo === fTipo);
 
-    // AGRUPAR POR MÊS/ANO
     const grupos = {};
     tFiltradas.forEach(t => {
         const [a, m] = t.data.split('-');
@@ -519,7 +510,7 @@ window.adicionarLancamentoAvulso = async () => {
 };
 
 // ==========================================
-// MÓDULO 3: DASHBOARD EXECUTIVO
+// MÓDULO 3: DASHBOARD EXECUTIVO COM ALTO CONTRASTE
 // ==========================================
 window.renderizarDashboard = () => {
     const container = document.getElementById('painel-dashboard-content');
@@ -601,9 +592,17 @@ window.renderizarDashboard = () => {
 
         <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
             <h4 style="color: #0d47a1; margin-top: 0; margin-bottom: 15px; text-align: center;">Divisão de Custos (%)</h4>
-            <div style="position: relative; height: 300px; width: 100%;"><canvas id="graficoCat"></canvas></div>
+            <div style="position: relative; height: 350px; width: 100%;"><canvas id="graficoCat"></canvas></div>
         </div>
     `;
+
+    // ARRAY DE CORES DE ALTO CONTRASTE (Para evitar confusão visual)
+    const coresDistintas = [
+        '#e53935', '#1e88e5', '#43a047', '#ffb300', '#8e24aa', 
+        '#00acc1', '#d81b60', '#f4511e', '#7cb342', '#3949ab', 
+        '#6d4c41', '#546e7a', '#00897b', '#c0ca33', '#5e35b1', 
+        '#ff8a65', '#81c784', '#64b5f6', '#ba68c8', '#a1887f'
+    ];
 
     setTimeout(() => {
         const ctx = document.getElementById('graficoCat');
@@ -616,7 +615,15 @@ window.renderizarDashboard = () => {
 
             chartInstance = new Chart(ctx, {
                 type: 'doughnut',
-                data: { labels: lbs, datasets: [{ data: dts, backgroundColor: ['#ef5350','#ab47bc','#7e57c2','#5c6bc0','#42a5f5','#26c6da','#26a69a','#66bb6a','#ffa726','#ec407a','#ffca28','#8d6e63'], borderWidth: 1 }] },
+                data: { 
+                    labels: lbs, 
+                    datasets: [{ 
+                        data: dts, 
+                        backgroundColor: coresDistintas, 
+                        borderWidth: 2,           // Borda mais grossa
+                        borderColor: '#ffffff'    // Borda branca para separar bem as cores
+                    }] 
+                },
                 options: { 
                     responsive: true, maintainAspectRatio: false, 
                     plugins: { 
