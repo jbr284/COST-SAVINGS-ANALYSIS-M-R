@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cost-savings-cache-v2.7';
+const CACHE_NAME = 'cost-savings-cache-v3.0';
 const urlsToCache = [
   './',
   './index.html',
