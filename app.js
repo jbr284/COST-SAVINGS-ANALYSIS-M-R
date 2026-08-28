@@ -158,7 +158,7 @@ window.renderizarCategoriasConfig = () => {
 };
 
 // ==========================================
-// IMPORTAÇÃO E CAÇADOR INTELIGENTE
+// IMPORTAÇÃO E CAÇADOR INTELIGENTE (ATUALIZADO V3.1)
 // ==========================================
 function limparMoedaCSV(val) {
     let n = val.toString().replace(/[R\$\s]/gi, '').trim();
@@ -217,37 +217,60 @@ window.processarCSV = (csv, contaId) => {
         res.data.forEach((cols, i) => {
             if (cols.length < 2) return; 
             let data = "", vals = [], descArr = [];
+            let isHeaderRow = false;
             
             cols.forEach(col => {
                 if(typeof col !== 'string') return;
+                // Padroniza os traços da web para sinal de menos real
                 let cl = col.trim().replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-');
                 if(!cl) return;
 
-                let dM = cl.match(/^(\d{2}\/\d{2}\/\d{2,4}|\d{4}-\d{2}-\d{2})/);
-                if (!data && dM) { data = dM[1]; return; }
-
-                let numCheck = cl.replace(/\s/g, '').toUpperCase();
-                if (numCheck.match(/^-?(R\$|BRL)?\d{1,3}(\.?\d{3})*,\d{2}$/) || numCheck.match(/^-?(R\$|BRL)?\d+(\.\d{2})$/)) {
-                    let v = limparMoedaCSV(cl); vals.push(v); return;
+                let up = cl.toUpperCase();
+                // Identifica se é o cabeçalho chato do Mercado Pago
+                if (up === 'DATA' || up.includes('DATA DE') || up === 'VALOR' || up === 'HISTÓRICO' || up === 'HISTORICO' || up === 'LÍQUIDO') {
+                    isHeaderRow = true;
                 }
 
+                // Tenta achar a Data (Nova Regra: aceita dias e meses com apenas 1 dígito)
+                let dM = cl.match(/(?:^|\s)(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{1,2}-\d{1,2})(?:$|\s|T)/);
+                if (!data && dM) { data = dM[1]; return; }
+
+                // Tenta achar o Valor monetário real (Nova Regra: aceita inteiros e flexibiliza decimais)
+                let numCheck = cl.replace(/\s/g, '').toUpperCase();
+                if (/^-?(R\$|BRL|U\$|\$)?\d{1,3}(\.?\d{3})*,\d{1,2}$/.test(numCheck) || 
+                    /^-?(R\$|BRL|U\$|\$)?\d{1,3}(,?\d{3})*\.\d{1,2}$/.test(numCheck) ||
+                    (/^-?\d+$/.test(numCheck) && numCheck.length <= 6)) { // Limite de 6 casas evita ler IDs de transação
+                    let v = limparMoedaCSV(cl); 
+                    vals.push(v); 
+                    return;
+                }
+
+                // O que sobra e não for apenas números misturados vira texto de descrição
                 if (!cl.match(/^[0-9\-\.]+$/) && cl !== '') descArr.push(cl);
             });
 
+            // Se o sistema detetou que esta linha tem títulos, ignora a linha toda
+            if (isHeaderRow) return;
+
             if (data && vals.length > 0) {
-                if (descArr.some(d => ['SALDO','HISTÓRICO','DATA','VALOR'].includes(d.toUpperCase()))) return;
-                let valor = vals[0];
-                if (valor === 0) return;
+                let valor = vals[0]; // Pega o primeiro valor da linha
+                if (valor === 0) return; // Ignora transações zeradas
                 
-                descArr = descArr.filter(d => !['Aprovado','Concluído','Saldo','Cartão'].includes(d));
-                descArr = descArr.filter(d => !d.match(/^\d{1,2}:\d{2}(:\d{2})?$/));
+                // Limpa lixo do Mercado Pago da descrição
+                descArr = descArr.filter(d => !['Aprovado','Concluído','Saldo','Cartão', 'Pix'].includes(d));
+                descArr = descArr.filter(d => !d.match(/^\d{1,2}:\d{2}(:\d{2})?$/)); // Remove horas isoladas
+                
                 let desc = descArr.sort((a,b)=>b.length - a.length)[0] || "Sem descrição";
                 
+                // Formatação blindada de Data para YYYY-MM-DD
                 let dF = data;
                 if (data.includes('/')) {
                     let p = data.split('/');
-                    if(p[2].length === 2) p[2] = "20"+p[2];
-                    dF = `${p[2]}-${p[1]}-${p[0]}`;
+                    let dia = p[0].padStart(2, '0');
+                    let mes = p[1].padStart(2, '0');
+                    let ano = p[2];
+                    if(ano.length === 2) ano = "20" + ano;
+                    dF = `${ano}-${mes}-${dia}`;
                 }
                 
                 window.transacoesPendentes.push({
@@ -271,11 +294,11 @@ function finalizarImportacao() {
     if (window.transacoesPendentes.length > 0) {
         window.mudarAba('registros'); 
         window.renderizarRegistrosSalvos();
-    } else alert("O arquivo foi lido, mas nenhuma transação válida foi encontrada.");
+    } else alert("O arquivo foi lido, mas nenhuma transação válida foi encontrada (verifique o formato do extrato).");
 }
 
 // ==========================================
-// REGISTROS (V3.0 - A MATEMÁTICA PURA E SANFONA LIMPA)
+// REGISTROS (A MATEMÁTICA PURA E SANFONA LIMPA)
 // ==========================================
 window.renderizarRegistrosSalvos = () => {
     const containerSanfona = document.getElementById('area-sanfonas');
@@ -439,7 +462,6 @@ window.salvarExtratoReal = async () => {
     const rows = document.querySelectorAll('#tabela-pendentes tbody tr');
     let salvas = 0;
     
-    // Desativa o botão para evitar clique duplo ansioso
     const btn = document.querySelector('#area-pendentes .btn-action');
     if(btn) { btn.innerText = "Salvando..."; btn.disabled = true; }
 
@@ -567,7 +589,7 @@ window.adicionarLancamentoAvulso = async () => {
     const desc = document.getElementById('avulsoDesc').value.trim();
     const v = parseFloat(document.getElementById('avulsoValor').value) || 0;
     const tipo = document.getElementById('avulsoTipo').value;
-    const cId = document.getElementById('avulsoConta').value; // Nova Função V3.0
+    const cId = document.getElementById('avulsoConta').value; 
     
     if (!data || !desc || v <= 0 || !cId) return alert("Preencha todos os campos do lançamento.");
     const valor = tipo === 'despesa' ? -Math.abs(v) : Math.abs(v);
@@ -724,7 +746,7 @@ window.renderizarDashboard = () => {
 window.renderizarDropdownContas = () => { 
     const selC = document.getElementById('contaImportacao');
     const selF = document.getElementById('filtroConta');
-    const selA = document.getElementById('avulsoConta'); // Nova lista no Avulso
+    const selA = document.getElementById('avulsoConta'); 
     
     if(selC) selC.innerHTML = '<option value="">-- OBRIGATÓRIO: Selecione a Conta --</option>';
     if(selF) selF.innerHTML = '<option value="todas">Todas as Contas</option>';
