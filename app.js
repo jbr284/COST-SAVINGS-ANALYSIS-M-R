@@ -158,7 +158,7 @@ window.renderizarCategoriasConfig = () => {
 };
 
 // ==========================================
-// IMPORTAÇÃO E CAÇADOR INTELIGENTE (ATUALIZADO V3.2)
+// IMPORTAÇÃO E CAÇADOR INTELIGENTE
 // ==========================================
 function limparMoedaCSV(val) {
     let n = val.toString().replace(/[R\$\s]/gi, '').trim();
@@ -225,12 +225,10 @@ window.processarCSV = (csv, contaId) => {
                 if(!cl) return;
 
                 let up = cl.toUpperCase();
-                // Novos termos do Mercado Pago em inglês e português adicionados ao filtro de cabeçalhos
                 if (up === 'DATA' || up.includes('DATA DE') || up === 'VALOR' || up === 'HISTÓRICO' || up === 'HISTORICO' || up === 'LÍQUIDO' || up === 'RELEASE_DATE' || up === 'INITIAL_BALANCE') {
                     isHeaderRow = true;
                 }
 
-                // V3.2 - Expressão regular expandida para encontrar datas com traços estranhos (DD-MM-YYYY) ou barras.
                 let dM = cl.match(/(?:^|\s)(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})(?:$|\s|T)/);
                 if (!data && dM) { data = dM[1]; return; }
 
@@ -238,9 +236,7 @@ window.processarCSV = (csv, contaId) => {
                 if (/^-?(R\$|BRL|U\$|\$)?\d{1,3}(\.?\d{3})*,\d{1,2}$/.test(numCheck) || 
                     /^-?(R\$|BRL|U\$|\$)?\d{1,3}(,?\d{3})*\.\d{1,2}$/.test(numCheck) ||
                     (/^-?\d+$/.test(numCheck) && numCheck.length <= 6)) { 
-                    let v = limparMoedaCSV(cl); 
-                    vals.push(v); 
-                    return;
+                    let v = limparMoedaCSV(cl); vals.push(v); return;
                 }
 
                 if (!cl.match(/^[0-9\-\.]+$/) && cl !== '') descArr.push(cl);
@@ -254,20 +250,13 @@ window.processarCSV = (csv, contaId) => {
                 
                 descArr = descArr.filter(d => !['Aprovado','Concluído','Saldo','Cartão', 'Pix'].includes(d));
                 descArr = descArr.filter(d => !d.match(/^\d{1,2}:\d{2}(:\d{2})?$/)); 
-                
                 let desc = descArr.sort((a,b)=>b.length - a.length)[0] || "Sem descrição";
                 
-                // V3.2 - Formatação de Data Flexível (Converte DD-MM-YYYY ou YYYY-MM-DD para banco)
                 let dF = data;
                 let sep = data.includes('/') ? '/' : '-';
                 let p = data.split(sep);
-                
-                if (p[0].length === 4) { // Veio YYYY-MM-DD
-                    dF = `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
-                } else { // Veio DD-MM-YYYY ou DD/MM/YYYY
-                    let ano = p[2].length === 2 ? "20" + p[2] : p[2];
-                    dF = `${ano}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
-                }
+                if (p[0].length === 4) { dF = `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`; } 
+                else { let ano = p[2].length === 2 ? "20" + p[2] : p[2]; dF = `${ano}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`; }
                 
                 window.transacoesPendentes.push({
                     id: `TEMP-${Date.now()}-${i}`, data: dF, descricao: desc.substring(0,50),
@@ -290,7 +279,7 @@ function finalizarImportacao() {
     if (window.transacoesPendentes.length > 0) {
         window.mudarAba('registros'); 
         window.renderizarRegistrosSalvos();
-    } else alert("O arquivo foi lido, mas nenhuma transação válida foi encontrada (verifique o formato do extrato).");
+    } else alert("O arquivo foi lido, mas nenhuma transação válida foi encontrada.");
 }
 
 // ==========================================
@@ -484,28 +473,34 @@ window.salvarExtratoReal = async () => {
 };
 
 // ==========================================
-// A FUNÇÃO MÁGICA PARA LIMPAR TESTES
+// A FUNÇÃO MÁGICA PARA LIMPAR TESTES (V3.3)
 // ==========================================
 window.apagarTodoOExtrato = async () => {
     if (!confirm("⚠️ PERIGO IMINENTE:\nTem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO?\nIsso vai remover todas as despesas e receitas inseridas, deixando o cofre vazio para começar de novo.")) return;
     
     window.mostrarToast("A Limpar a Base de Dados... Por favor, aguarde.");
-    
     try {
-        for (let t of window.transacoes) {
-            await deleteDoc(doc(db, "banco_transacoes", t.id));
-        }
+        for (let t of window.transacoes) { await deleteDoc(doc(db, "banco_transacoes", t.id)); }
         window.transacoes = [];
         window.mostrarToast("Sistema completamente limpo e pronto!");
         window.renderizarRegistrosSalvos();
         window.renderizarDashboard();
-    } catch (e) {
-        alert("Erro ao tentar limpar o sistema: " + e.message);
-    }
+    } catch (e) { alert("Erro ao tentar limpar o sistema: " + e.message); }
+};
+
+window.apagarRegrasIA = async () => {
+    if (!confirm("⚠️ PERIGO:\nDeseja apagar todas as regras de categorização automática?\nO sistema esquecerá tudo o que aprendeu (menos as categorias criadas) e você terá de classificar as futuras importações manualmente até ele reaprender.")) return;
+    
+    window.mostrarToast("A apagar memória da I.A...");
+    try {
+        for (let r of window.regras) { await deleteDoc(doc(db, "banco_regras", r.id)); }
+        window.regras = [];
+        window.mostrarToast("Memória da Inteligência Artificial limpa com sucesso!");
+    } catch (e) { alert("Erro ao limpar memória: " + e.message); }
 };
 
 // ==========================================
-// SEGURANÇA E EDIÇÃO DE LANÇAMENTOS
+// SEGURANÇA E EDIÇÃO COM APRENDIZADO DA IA (V3.3)
 // ==========================================
 window.recategorizarInline = async (id, selectEl, oldCat) => {
     const novaCat = selectEl.value;
@@ -516,7 +511,27 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
     try {
         await updateDoc(doc(db, "banco_transacoes", id), { categoria: novaCat });
         const t = window.transacoes.find(x => x.id === id);
-        if (t) t.categoria = novaCat;
+        if (t) {
+            t.categoria = novaCat;
+            
+            // --- A MÁGICA DA IA AQUI ---
+            // Se o usuário corrige uma transação, o sistema atualiza a regra!
+            if (novaCat !== 'classificar' && novaCat !== 'transferencia_interna' && novaCat !== 'avulso') {
+                const chave = t.descricao.trim().toUpperCase();
+                const regraExiste = window.regras.find(r => r.palavra_chave === chave);
+                
+                if (regraExiste) {
+                    // Atualiza regra existente
+                    await updateDoc(doc(db, "banco_regras", regraExiste.id), { categoria: novaCat });
+                    regraExiste.categoria = novaCat;
+                } else {
+                    // Cria regra nova se não existia
+                    const novaRegra = { id: `REG-${Date.now()}`, palavra_chave: chave, categoria: novaCat };
+                    await setDoc(doc(db, "banco_regras", novaRegra.id), novaRegra);
+                    window.regras.push(novaRegra);
+                }
+            }
+        }
         window.mostrarToast("Categoria atualizada com sucesso!");
         window.renderizarRegistrosSalvos(); 
         window.renderizarDashboard();
