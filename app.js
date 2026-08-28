@@ -158,10 +158,11 @@ window.renderizarCategoriasConfig = () => {
 };
 
 // ==========================================
-// IMPORTAÇÃO E CAÇADOR INTELIGENTE
+// IMPORTAÇÃO E CAÇADOR INTELIGENTE (ATUALIZADO V3.4 - PICPAY)
 // ==========================================
 function limparMoedaCSV(val) {
-    let n = val.toString().replace(/[R\$\s]/gi, '').trim();
+    // V3.4: Adicionado o \+ na expressão regular para remover o sinal de MAIS antes de processar
+    let n = val.toString().replace(/[R\$\s\+]/gi, '').trim();
     if (n.includes('.') && n.includes(',')) n = n.replace(/\./g, '').replace(',', '.');
     else if (n.includes(',')) n = n.replace(',', '.'); 
     return parseFloat(n) || 0;
@@ -233,9 +234,10 @@ window.processarCSV = (csv, contaId) => {
                 if (!data && dM) { data = dM[1]; return; }
 
                 let numCheck = cl.replace(/\s/g, '').toUpperCase();
-                if (/^-?(R\$|BRL|U\$|\$)?\d{1,3}(\.?\d{3})*,\d{1,2}$/.test(numCheck) || 
-                    /^-?(R\$|BRL|U\$|\$)?\d{1,3}(,?\d{3})*\.\d{1,2}$/.test(numCheck) ||
-                    (/^-?\d+$/.test(numCheck) && numCheck.length <= 6)) { 
+                // V3.4: Alteração do ^-? para ^[+-]? para engolir sinais positivos nativos do PicPay
+                if (/^[+-]?(R\$|BRL|U\$|\$)?\d{1,3}(\.?\d{3})*,\d{1,2}$/.test(numCheck) || 
+                    /^[+-]?(R\$|BRL|U\$|\$)?\d{1,3}(,?\d{3})*\.\d{1,2}$/.test(numCheck) ||
+                    (/^[+-]?\d+$/.test(numCheck) && numCheck.length <= 7)) { 
                     let v = limparMoedaCSV(cl); vals.push(v); return;
                 }
 
@@ -279,11 +281,11 @@ function finalizarImportacao() {
     if (window.transacoesPendentes.length > 0) {
         window.mudarAba('registros'); 
         window.renderizarRegistrosSalvos();
-    } else alert("O arquivo foi lido, mas nenhuma transação válida foi encontrada.");
+    } else alert("O arquivo foi lido, mas nenhuma transação válida foi encontrada (verifique o formato do extrato).");
 }
 
 // ==========================================
-// REGISTROS (A MATEMÁTICA PURA E SANFONA LIMPA)
+// REGISTROS 
 // ==========================================
 window.renderizarRegistrosSalvos = () => {
     const containerSanfona = document.getElementById('area-sanfonas');
@@ -473,7 +475,7 @@ window.salvarExtratoReal = async () => {
 };
 
 // ==========================================
-// A FUNÇÃO MÁGICA PARA LIMPAR TESTES (V3.3)
+// A FUNÇÃO MÁGICA PARA LIMPAR TESTES 
 // ==========================================
 window.apagarTodoOExtrato = async () => {
     if (!confirm("⚠️ PERIGO IMINENTE:\nTem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO?\nIsso vai remover todas as despesas e receitas inseridas, deixando o cofre vazio para começar de novo.")) return;
@@ -500,7 +502,7 @@ window.apagarRegrasIA = async () => {
 };
 
 // ==========================================
-// SEGURANÇA E EDIÇÃO COM APRENDIZADO DA IA (V3.3)
+// SEGURANÇA E EDIÇÃO COM APRENDIZADO DA IA
 // ==========================================
 window.recategorizarInline = async (id, selectEl, oldCat) => {
     const novaCat = selectEl.value;
@@ -513,19 +515,14 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
         const t = window.transacoes.find(x => x.id === id);
         if (t) {
             t.categoria = novaCat;
-            
-            // --- A MÁGICA DA IA AQUI ---
-            // Se o usuário corrige uma transação, o sistema atualiza a regra!
             if (novaCat !== 'classificar' && novaCat !== 'transferencia_interna' && novaCat !== 'avulso') {
                 const chave = t.descricao.trim().toUpperCase();
                 const regraExiste = window.regras.find(r => r.palavra_chave === chave);
                 
                 if (regraExiste) {
-                    // Atualiza regra existente
                     await updateDoc(doc(db, "banco_regras", regraExiste.id), { categoria: novaCat });
                     regraExiste.categoria = novaCat;
                 } else {
-                    // Cria regra nova se não existia
                     const novaRegra = { id: `REG-${Date.now()}`, palavra_chave: chave, categoria: novaCat };
                     await setDoc(doc(db, "banco_regras", novaRegra.id), novaRegra);
                     window.regras.push(novaRegra);
