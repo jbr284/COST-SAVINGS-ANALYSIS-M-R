@@ -1,174 +1,300 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cost Savings Analysis M&R</title>
-    <!-- Substitua o href pelo caminho correto do seu arquivo CSS, se necessário -->
-    <link rel="stylesheet" href="style.css">
-    <!-- Chart.js para o Dashboard -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <!-- PapaParse para ler CSV -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cost Savings Analysis M&R</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
+  <meta name="theme-color" content="#002f6c">
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    .app-header { background-color: #0a192f; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+    .app-title { font-weight: 900; letter-spacing: 1px; font-size: 18px; text-transform: uppercase; text-align: center; margin: 0; }
+    .subtitle { font-size: 10px; color: #90caf9; letter-spacing: 0.5px; display: block; text-align: center; }
+    
+    .tabs-container { display: flex; overflow-x: auto; background: #002f6c; border-bottom: 3px solid #1565c0; }
+    .tab-btn { flex: 1; min-width: 120px; padding: 12px; background: none; border: none; color: rgba(255,255,255,0.7); font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 12px; }
+    .tab-btn.active { color: white; border-bottom: 4px solid #4dd0e1; background: rgba(255,255,255,0.1); }
+    .panel { display: none; padding: 20px; animation: fadeIn 0.3s ease; }
+    .panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .upload-box { border: 2px dashed #90caf9; background: #e3f2fd; padding: 40px; text-align: center; border-radius: 12px; cursor: pointer; transition: 0.3s; margin-bottom: 20px; }
+    .upload-box:hover { background: #bbdefb; border-color: #1565c0; }
+    
+    .accordion { background-color: #1565c0; color: white; cursor: pointer; padding: 15px; width: 100%; border: none; text-align: left; outline: none; font-size: 14px; font-weight: bold; border-radius: 6px; margin-top: 15px; transition: 0.3s; display: flex; justify-content: space-between; }
+    .accordion.active, .accordion:hover { background-color: #0d47a1; }
+    .accordion-panel { padding: 0 15px; background-color: white; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; border: 1px solid #ddd; border-top: none; border-radius: 0 0 6px 6px; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+  </style>
 </head>
 <body>
 
-    <!-- =========================================
-         TELA DE LOGIN
-    ========================================= -->
-    <div id="tela-login">
-        <div class="login-card">
-            <div class="login-header">
-                <h2>COST SAVINGS ANALYSIS</h2>
-                <p>MARTINS & ROSA</p>
-            </div>
-            <div class="input-group">
-                <label for="emailLogin">E-mail Corporativo</label>
-                <input type="email" id="emailLogin" placeholder="exemplo@martinserosa.com">
-            </div>
-            <div class="input-group">
-                <label for="senhaLogin">Senha de Acesso</label>
-                <input type="password" id="senhaLogin" placeholder="••••••••">
-            </div>
-            <button onclick="window.fazerLogin()" class="btn">ENTRAR NO SISTEMA</button>
+  <div id="toast">✅ Operação realizada!</div>
+
+  <!-- MODAL DE EDIÇÃO DE LANÇAMENTOS -->
+  <div id="modal-editar" class="modal-overlay hidden noprint">
+      <div class="form-box" style="width: 90%; max-width: 400px; margin: 0;">
+          <h3 style="color:#0d47a1; margin-top:0; border-bottom: 1px solid #eee; padding-bottom:10px;">Editar Lançamento</h3>
+          <input type="hidden" id="editId">
+          <div class="grid-input" style="grid-template-columns: 1fr;">
+              <div><label>Data:</label><input type="date" id="editData"></div>
+              <div><label>Descrição:</label><input type="text" id="editDesc"></div>
+              <div><label>Valor (R$):</label><input type="number" id="editValor" step="0.01"></div>
+              <div>
+                  <label>Tipo:</label>
+                  <select id="editTipo">
+                      <option value="despesa">Saída (Despesa)</option>
+                      <option value="receita">Entrada (Receita)</option>
+                  </select>
+              </div>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:20px;">
+              <button class="btn-action" style="background:#78909c;" onclick="document.getElementById('modal-editar').classList.add('hidden')">Cancelar</button>
+              <button class="btn-action btn-green" onclick="window.salvarEdicao()">💾 Salvar</button>
+          </div>
+      </div>
+  </div>
+
+  <!-- MODAL DE EDIÇÃO DE CATEGORIAS -->
+  <div id="modal-editar-categoria" class="modal-overlay hidden noprint">
+      <div class="form-box" style="width: 90%; max-width: 400px; margin: 0;">
+          <h3 style="color:#0d47a1; margin-top:0; border-bottom: 1px solid #eee; padding-bottom:10px;">Editar Categoria</h3>
+          <input type="hidden" id="editCatId">
+          <div class="grid-input" style="grid-template-columns: 80px 1fr;">
+              <div>
+                  <label>Emoji:</label>
+                  <select id="editCatEmoji" style="font-size: 16px;">
+                      <option value="🏷️">🏷️ Geral</option>
+                      <option value="💵">💵 Dinheiro/Pix</option>
+                      <option value="🏦">🏦 Rendimento</option>
+                      <option value="🏢">🏢 Salário</option>
+                      <option value="🤝">🤝 Vendas/Acordo</option>
+                      <option value="🪙">🪙 Cripto/Moedas</option>
+                      <option value="📈">📈 Investimentos</option>
+                      <option value="🛒">🛒 Supermercado</option>
+                      <option value="🛍️">🛍️ Compras</option>
+                      <option value="🐶">🐶 Pets/Vet</option>
+                      <option value="📚">📚 Educação</option>
+                      <option value="✈️">✈️ Viagem/Férias</option>
+                      <option value="🚗">🚗 Veículo/Combustível</option>
+                      <option value="🏥">🏥 Saúde/Médico</option>
+                      <option value="💊">💊 Farmácia</option>
+                      <option value="💇‍♀️">💇‍♀️ Beleza</option>
+                      <option value="🏋️">🏋️ Esporte</option>
+                      <option value="🎮">🎮 Jogos</option>
+                      <option value="🎬">🎬 Streaming</option>
+                      <option value="📱">📱 Celular/Internet</option>
+                      <option value="💡">💡 Contas Casa</option>
+                      <option value="💳">💳 Cartão Crédito</option>
+                      <option value="🎁">🎁 Presentes</option>
+                      <option value="👶">👶 Filhos/Crianças</option>
+                      <option value="🛠️">🛠️ Manutenção</option>
+                      <option value="💼">💼 Trabalho</option>
+                  </select>
+              </div>
+              <div><label>Nome:</label><input type="text" id="editCatNome"></div>
+          </div>
+          <p style="font-size: 11px; color: #666; margin-top:10px;">Nota: Alterar o nome não quebra os relatórios de meses anteriores.</p>
+          <div style="display:flex; gap:10px; margin-top:15px;">
+              <button class="btn-action" style="background:#78909c;" onclick="document.getElementById('modal-editar-categoria').classList.add('hidden')">Cancelar</button>
+              <button class="btn-action btn-green" onclick="window.salvarEdicaoCategoria()">💾 Salvar Categoria</button>
+          </div>
+      </div>
+  </div>
+
+  <!-- TELA LOGIN -->
+  <div id="tela-login" class="container-center hidden">
+    <h1 style="color:#002f6c; font-size: 28px; margin-bottom: 0; text-align: center;">COST SAVINGS ANALYSIS</h1>
+    <span style="display:block; text-align:center; color:#1565c0; font-weight:bold; margin-bottom: 20px; font-size:14px;">MARTINS & ROSA</span>
+    <input type="email" id="emailLogin" class="input-login" placeholder="E-mail" style="max-width: 300px;">
+    <input type="password" id="senhaLogin" class="input-login" placeholder="Senha" style="max-width: 300px;">
+    <button class="btn-action btn-green" onclick="window.fazerLogin()" style="max-width: 300px;">Entrar no Sistema</button>
+  </div>
+
+  <!-- APP PRINCIPAL -->
+  <div id="app" class="container hidden">
+    
+    <div class="app-header noprint">
+        <button class="btn-nav-top" onclick="window.sairApp()">Sair</button>
+        <div>
+            <div class="app-title">COST SAVINGS ANALYSIS M&R</div>
+            <span class="subtitle">Análise de Economias Martins & Rosa</span>
         </div>
+        <div style="width: 50px;"></div>
     </div>
 
-    <!-- =========================================
-         SISTEMA (OCULTO ATÉ LOGIN)
-    ========================================= -->
-    <div id="app" class="hidden">
-        
-        <!-- Cabeçalho Executivo -->
-        <header class="app-header">
-            <div>
-                <h1>COST SAVINGS ANALYSIS M&R</h1>
-                <p>Análise de Economias Martins & Rosa</p>
-            </div>
-            <button onclick="window.sairApp()">Sair do Sistema</button>
-        </header>
-
-        <!-- Barra de Navegação -->
-        <nav class="tab-bar">
-            <button id="btn-tab-importacao" class="tab-btn" onclick="window.mudarAba('importacao')">📥 Importação</button>
-            <button id="btn-tab-registros" class="tab-btn active" onclick="window.mudarAba('registros')">📂 Registros</button>
+    <div class="fixed-area noprint">
+        <div class="tabs-container">
+            <button id="btn-tab-importacao" class="tab-btn active" onclick="window.mudarAba('importacao')">📥 Importação</button>
+            <button id="btn-tab-registros" class="tab-btn" onclick="window.mudarAba('registros')">🗂️ Registros</button>
             <button id="btn-tab-dashboard" class="tab-btn" onclick="window.mudarAba('dashboard')">📊 Dashboard</button>
-            <button id="btn-tab-config" class="tab-btn" onclick="window.mudarAba('config')">⚙️ Configurações</button>
-        </nav>
-
-        <!-- Área de Conteúdo Central -->
-        <main class="app-content">
-
-            <!-- PAINEL 1: IMPORTAÇÃO -->
-            <div id="painel-importacao" class="panel">
-                <div class="card">
-                    <h3>Importar Extrato Bancário</h3>
-                    <div class="input-group">
-                        <label>Selecione a Conta:</label>
-                        <select id="contaImportacao"></select>
-                    </div>
-                    <div class="input-group">
-                        <label>Arquivo (OFX ou CSV):</label>
-                        <input type="file" id="arquivoExtrato" accept=".ofx,.csv" onchange="window.processarArquivo(event)">
-                    </div>
-                </div>
-                <!-- Formulário de Lançamento Avulso (Manual) -->
-                <div class="card">
-                    <h3>Lançamento Manual</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        <div class="input-group"><label>Data</label><input type="date" id="avulsoData"></div>
-                        <div class="input-group"><label>Conta</label><select id="avulsoConta"></select></div>
-                        <div class="input-group"><label>Descrição</label><input type="text" id="avulsoDesc"></div>
-                        <div class="input-group"><label>Valor (R$)</label><input type="number" id="avulsoValor" step="0.01"></div>
-                        <div class="input-group"><label>Tipo</label><select id="avulsoTipo"><option value="despesa">Despesa (-)</option><option value="receita">Receita (+)</option></select></div>
-                    </div>
-                    <button class="btn" onclick="window.adicionarLancamentoAvulso()" style="width: 200px;">Adicionar Lançamento</button>
-                </div>
+            <button id="btn-tab-configuracoes" class="tab-btn" onclick="window.mudarAba('configuracoes')">⚙️ Config.</button>
+        </div>
+    </div>
+    
+    <div class="scroll-content" style="background: #f0f2f5; min-height: calc(100vh - 120px);">
+        
+        <!-- ABA 1: IMPORTAÇÃO -->
+        <div id="painel-importacao" class="panel active noprint">
+            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Importar Extrato Bancário</h3>
+            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 15px;">
+                <label style="color: #c62828;">1º Passo: Selecione de qual conta é este extrato</label>
+                <select id="contaImportacao" style="padding: 10px; width: 100%; border: 1px solid #1565c0; border-radius: 4px; font-weight: bold; color: #1565c0;">
+                    <option value="">-- Carregando Contas... --</option>
+                </select>
             </div>
+            <div class="upload-box" onclick="document.getElementById('arquivoExtrato').click()">
+                <div style="font-size: 40px; margin-bottom: 10px;">📄</div>
+                <h4 style="color: #1565c0; margin: 0 0 5px 0;">2º Passo: Clique ou arraste o seu extrato aqui</h4>
+                <p style="color: #666; font-size: 12px; margin: 0;">Formatos: <b>.OFX</b> e <b>.CSV</b></p>
+                <input type="file" id="arquivoExtrato" accept=".ofx, .csv" style="display: none;" onchange="window.processarArquivo(event)">
+            </div>
+            
+            <div class="form-box">
+                <h4 style="color: #f57c00; border-bottom: 1px solid #ffe0b2; padding-bottom: 5px; margin-top:0;">Lançamento Avulso Rápido</h4>
+                <div class="grid-input" style="grid-template-columns: 1fr 1fr;">
+                    <div><label>Data:</label><input type="date" id="avulsoData"></div>
+                    <div><label>Valor (R$):</label><input type="number" id="avulsoValor" placeholder="0.00"></div>
+                </div>
+                <div class="grid-input" style="grid-template-columns: 1fr 1fr 1fr; margin-top: 10px; gap: 10px;">
+                    <div style="grid-column: span 1;"><label>Tipo:</label>
+                        <select id="avulsoTipo">
+                            <option value="receita">Entrada (Receita)</option>
+                            <option value="despesa">Saída (Despesa)</option>
+                        </select>
+                    </div>
+                    <div style="grid-column: span 1;"><label>Conta Destino:</label>
+                        <select id="avulsoConta"><option value="Manual">Geral / Manual</option></select>
+                    </div>
+                    <div style="grid-column: span 1;"><label>Descrição:</label><input type="text" id="avulsoDesc" placeholder="Ex: Saldo Inicial"></div>
+                </div>
+                <button class="btn-action" style="background-color: #f57c00; margin-top: 15px;" onclick="window.adicionarLancamentoAvulso()">➕ Adicionar Lançamento</button>
+            </div>
+        </div>
 
-            <!-- PAINEL 2: REGISTROS -->
-            <div id="painel-registros" class="panel active">
-                <div class="card">
-                    <h3>Filtros e Lançamentos</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px;">
-                        <div class="input-group">
-                            <label>BANCO/CONTA:</label>
-                            <select id="filtroConta" onchange="window.renderizarRegistrosSalvos()"></select>
-                        </div>
-                        <div class="input-group">
-                            <label>CATEGORIA:</label>
-                            <select id="filtroCategoria" onchange="window.renderizarRegistrosSalvos()"></select>
-                        </div>
-                        <div class="input-group">
-                            <label>TIPO:</label>
-                            <select id="filtroTipo" onchange="window.renderizarRegistrosSalvos()">
-                                <option value="todos">Todos</option>
-                                <option value="receita">Receitas (+)</option>
-                                <option value="despesa">Despesas (-)</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label>ORDENAR POR:</label>
+        <!-- ABA 2: REGISTROS -->
+        <div id="painel-registros" class="panel print-area">
+            <div class="noprint">
+                <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Filtros e Lançamentos</h3>
+                
+                <div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px;">
+                    <div class="grid-input" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px;">
+                        <div><label>Banco/Conta:</label><select id="filtroConta" onchange="window.renderizarRegistrosSalvos()"><option value="todas">Todas as Contas</option></select></div>
+                        <div><label>Categoria:</label><select id="filtroCategoria" onchange="window.renderizarRegistrosSalvos()"><option value="todas">Todas Categorias</option></select></div>
+                        <div><label>Tipo:</label><select id="filtroTipo" onchange="window.renderizarRegistrosSalvos()"><option value="todos">Todos (Entradas/Saídas)</option><option value="receita">Apenas Entradas (+)</option><option value="despesa">Apenas Saídas (-)</option></select></div>
+                        <div>
+                            <label>Ordenar Por:</label>
                             <select id="filtroOrdem" onchange="window.renderizarRegistrosSalvos()">
                                 <option value="data_desc">Data (Mais Novos)</option>
                                 <option value="data_asc">Data (Mais Antigos)</option>
-                                <option value="valor_desc">Maior Valor</option>
+                                <option value="valor_desc">Valor (Maior p/ Menor)</option>
+                                <option value="valor_asc">Valor (Menor p/ Maior)</option>
+                                <option value="az">Descrição (A-Z)</option>
+                                <option value="za">Descrição (Z-A)</option>
                             </select>
                         </div>
+                        <div style="display: flex; align-items: flex-end;"><button class="btn-action btn-green" style="padding: 12px; margin-bottom: 2px; width: 100%;" onclick="window.print()">🖨️ Gerar PDF</button></div>
                     </div>
                 </div>
-                
-                <div id="area-pendentes"></div>
-                <div id="area-sanfonas"></div>
             </div>
 
-            <!-- PAINEL 3: DASHBOARD -->
-            <div id="painel-dashboard" class="panel">
-                <div id="painel-dashboard-content">
-                    <!-- O app.js injeta o Dashboard inteiro aqui dentro -->
+            <div class="onlyprint" style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #0d47a1; margin: 0;">COST SAVINGS ANALYSIS M&R</h2>
+                <p style="margin: 5px 0; color: #555;">Relatório de Registros Financeiros</p>
+            </div>
+
+            <div id="area-pendentes" class="noprint"></div>
+            <div id="area-sanfonas"></div>
+        </div>
+
+        <!-- ABA 3: DASHBOARD -->
+        <div id="painel-dashboard" class="panel noprint">
+            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Balanço Executivo</h3>
+            <div id="painel-dashboard-content">A calcular métricas...</div>
+        </div>
+
+        <!-- ABA 4: CONFIGURAÇÕES -->
+        <div id="painel-configuracoes" class="panel noprint">
+            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Gestão de Contas e Fontes</h3>
+            <div class="form-box">
+                <h4 style="color: #f57c00; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #ffe0b2; padding-bottom: 5px;">Nova Conta</h4>
+                <div class="grid-input" style="grid-template-columns: 1fr 1fr 1fr;">
+                    <div><label>Banco:</label><input type="text" id="cadBanco" placeholder="Ex: Bradesco"></div>
+                    <div><label>Titular:</label><input type="text" id="cadTitular" placeholder="Ex: João B. Rosa"></div>
+                    <div><label>Fonte / Origem:</label><input type="text" id="cadFonte" placeholder="Ex: Salário"></div>
                 </div>
+                <button class="btn-action btn-green" style="margin-top: 15px;" onclick="window.adicionarConta()">💾 Adicionar Conta</button>
             </div>
+            <h3 style="color:#0d47a1; margin-bottom: 5px;">Contas Cadastradas</h3>
+            <div id="lista-contas-container"></div>
+            
+            <hr style="margin: 40px 0 30px 0; border: 0; border-top: 2px dashed #ccc;">
 
-            <!-- PAINEL 4: CONFIGURAÇÕES -->
-            <div id="painel-config" class="panel">
-                <div class="card">
-                    <h3>Cadastro de Contas Bancárias</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
-                        <div class="input-group"><label>Banco</label><input type="text" id="cadBanco" placeholder="Ex: Nubank"></div>
-                        <div class="input-group"><label>Titular</label><input type="text" id="cadTitular"></div>
-                        <div class="input-group"><label>Fonte (Opcional)</label><input type="text" id="cadFonte"></div>
+            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Categorias Customizadas</h3>
+            <div class="form-box">
+                <h4 style="color: #f57c00; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #ffe0b2; padding-bottom: 5px;">Nova Categoria</h4>
+                <div class="grid-input" style="grid-template-columns: minmax(100px, 1fr) 3fr;">
+                    <div>
+                        <label>Ícone / Emoji:</label>
+                        <select id="cadCatEmoji" style="font-size: 16px;">
+                            <option value="🏷️">🏷️ Geral</option>
+                            <option value="💵">💵 Dinheiro/Pix</option>
+                            <option value="🏦">🏦 Rendimento</option>
+                            <option value="🏢">🏢 Salário</option>
+                            <option value="🤝">🤝 Vendas/Acordo</option>
+                            <option value="🪙">🪙 Cripto/Moedas</option>
+                            <option value="📈">📈 Investimentos</option>
+                            <option value="🛒">🛒 Supermercado</option>
+                            <option value="🛍️">🛍️ Compras</option>
+                            <option value="🐶">🐶 Pets/Vet</option>
+                            <option value="📚">📚 Educação</option>
+                            <option value="✈️">✈️ Viagem/Férias</option>
+                            <option value="🚗">🚗 Veículo/Combustível</option>
+                            <option value="🏥">🏥 Saúde/Médico</option>
+                            <option value="💊">💊 Farmácia</option>
+                            <option value="💇‍♀️">💇‍♀️ Beleza</option>
+                            <option value="🏋️">🏋️ Esporte</option>
+                            <option value="🎮">🎮 Jogos</option>
+                            <option value="🎬">🎬 Streaming</option>
+                            <option value="📱">📱 Celular/Internet</option>
+                            <option value="💡">💡 Contas Casa</option>
+                            <option value="💳">💳 Cartão Crédito</option>
+                            <option value="🎁">🎁 Presentes</option>
+                            <option value="👶">👶 Filhos/Crianças</option>
+                            <option value="🛠️">🛠️ Manutenção</option>
+                            <option value="💼">💼 Trabalho</option>
+                        </select>
                     </div>
-                    <button class="btn" onclick="window.adicionarConta()" style="width: 200px;">Salvar Conta</button>
-                    <div id="lista-contas-container" style="margin-top: 20px;"></div>
+                    <div><label>Nome da Categoria:</label><input type="text" id="cadCatNome" placeholder="Ex: Rendimento Poupança"></div>
                 </div>
+                <button class="btn-action" style="background-color: #1565c0; margin-top: 15px;" onclick="window.adicionarCategoria()">➕ Adicionar Categoria</button>
+            </div>
+            <h3 style="color:#0d47a1; margin-bottom: 5px;">Suas Categorias</h3>
+            <div id="lista-categorias-container"></div>
 
-                <div class="card">
-                    <h3>Zerar Sistema</h3>
-                    <p style="color: var(--text-muted); font-size: 13px;">Use estas opções para apagar o histórico e recomeçar.</p>
-                    <button class="btn" style="background-color: var(--danger); width: auto; margin-right: 10px;" onclick="window.apagarTodoOExtrato()">Apagar Todo o Extrato</button>
-                    <button class="btn" style="background-color: #F59E0B; width: auto;" onclick="window.apagarRegrasIA()">Apagar Regras da I.A.</button>
-                </div>
+            <hr style="margin: 40px 0 30px 0; border: 0; border-top: 2px dashed #ccc;">
+
+            <!-- ZONA DE PERIGO ATUALIZADA COM LIMPEZA DE IA -->
+            <h3 style="color:#c62828; border-bottom: 2px solid #ffcdd2; padding-bottom: 10px; margin-top:0;">⚠️ Zona de Perigo</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Problemas nos testes? Use estes botões para limpar as transações e apagar a memória da inteligência artificial do sistema.</p>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <button class="btn-action" style="background-color: #d32f2f; flex: 1;" onclick="window.apagarTodoOExtrato()">🧹 APAGAR TODOS OS LANÇAMENTOS</button>
+                <button class="btn-action" style="background-color: #e64a19; flex: 1;" onclick="window.apagarRegrasIA()">🧠 LIMPAR MEMÓRIA DA I.A.</button>
             </div>
 
-        </main>
+        </div>
+
     </div>
+  </div>
 
-    <!-- Modais de Edição (Ocultos por padrão) -->
-    <div id="modal-editar" class="hidden">
-        <!-- Campos de edição (Mantenha seu modal atual aqui se tiver uma estrutura específica) -->
-        <input type="hidden" id="editId">
-        <input type="date" id="editData">
-        <input type="text" id="editDesc">
-        <input type="number" id="editValor">
-        <select id="editTipo"><option value="despesa">Despesa</option><option value="receita">Receita</option></select>
-        <button onclick="window.salvarEdicao()">Salvar</button>
-    </div>
-
-    <!-- Componente Toast de Notificação -->
-    <div id="toast">Mensagem do Sistema</div>
-
-    <!-- Vínculo com a inteligência do sistema -->
-    <script type="module" src="app.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  
+  <script type="module" src="app.js?v=3.3"></script>
 </body>
 </html>

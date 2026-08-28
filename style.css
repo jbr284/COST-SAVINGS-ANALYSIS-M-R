@@ -1,204 +1,221 @@
-/* =========================================================
-   SISTEMA DE CORES E VARIÁVEIS (PADRÃO ERP)
-========================================================= */
-:root {
-    --bg-app: #F1F5F9;          /* Fundo cinza/azulado bem claro para o sistema */
-    --bg-login: #0F172A;        /* Azul marinho profundo para a tela de login */
-    --header-bg: #0F172A;       /* Cabeçalho do sistema */
-    --tab-bg: #1E3A8A;          /* Fundo da barra de abas */
-    --tab-hover: #2563EB;       /* Aba selecionada ou hover */
-    
-    --card-bg: #FFFFFF;         /* Fundo de painéis e tabelas */
-    --text-main: #334155;       /* Texto padrão (cinza escuro) */
-    --text-muted: #64748B;      /* Texto secundário */
-    
-    --btn-primary: #2E7D32;     /* Verde corporativo para ações principais */
-    --btn-primary-hover: #1B5E20;
-    --danger: #DC2626;          /* Vermelho para alertas/exclusão */
-    --danger-bg: #FEF2F2;
-    --success: #16A34A;         /* Verde para saldos positivos */
-    
-    --border-color: #E2E8F0;    /* Bordas suaves */
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 15px 35px rgba(0, 0, 0, 0.4);
-    --radius: 8px;
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+
+* { 
+    box-sizing: border-box; 
+    font-family: 'Roboto', sans-serif; 
 }
 
-/* =========================================================
-   RESETS E BASE
-========================================================= */
-* { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(--text-main); height: 100vh; }
+body { 
+    margin: 0; 
+    padding: 0; 
+    background-color: #eef2f3; 
+    color: #333; 
+}
+
+/* =======================================
+   UTILITÁRIOS
+======================================= */
 .hidden { display: none !important; }
 
-/* =========================================================
-   TELA DE LOGIN
-========================================================= */
-#tela-login {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: var(--bg-login);
-    padding: 20px;
-}
-.login-card {
-    background-color: var(--card-bg);
-    padding: 40px 35px;
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-lg);
-    width: 100%;
-    max-width: 420px;
-}
-.login-header { text-align: center; margin-bottom: 30px; }
-.login-header h2 { margin: 0; color: var(--bg-login); font-size: 24px; font-weight: 800; }
-.login-header p { margin: 5px 0 0 0; color: var(--tab-bg); font-size: 14px; font-weight: 600; text-transform: uppercase; }
-
-/* =========================================================
-   INPUTS E FORMULÁRIOS
-========================================================= */
-.input-group { margin-bottom: 20px; }
-.input-group label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-main); font-weight: 700; }
-.input-group input, .input-group select {
-    width: 100%;
-    padding: 12px 15px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 14px;
-    background-color: #F8FAFC;
-    transition: all 0.3s ease;
-}
-.input-group input:focus, .input-group select:focus {
-    outline: none;
-    border-color: var(--tab-hover);
-    background-color: #ffffff;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+/* =======================================
+   ESTRUTURA BASE (CONTAINERS)
+======================================= */
+.container-center { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    height: 100vh; 
+    background: #f0f2f5; 
+    padding: 20px; 
 }
 
-/* =========================================================
-   BOTÕES
-========================================================= */
-.btn {
-    width: 100%;
-    background-color: var(--btn-primary);
-    color: #ffffff;
-    border: none;
-    padding: 14px;
-    font-size: 15px;
-    font-weight: bold;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: var(--shadow-sm);
-}
-.btn:hover { background-color: var(--btn-primary-hover); transform: translateY(-1px); }
-.btn:active { transform: translateY(1px); }
-.btn-icon { background: none; border: none; cursor: pointer; font-size: 16px; transition: transform 0.2s; }
-.btn-icon:hover { transform: scale(1.2); }
-
-/* =========================================================
-   ESTRUTURA DO SISTEMA (APP)
-========================================================= */
-#app { display: flex; flex-direction: column; height: 100vh; }
-
-.app-header {
-    background-color: var(--header-bg);
-    color: white;
-    padding: 15px 30px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: var(--shadow-md);
-    z-index: 10;
-}
-.app-header h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
-.app-header p { margin: 2px 0 0 0; font-size: 12px; color: #94A3B8; }
-.app-header button { background: transparent; border: 1px solid #475569; color: white; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
-.app-header button:hover { background: #1E293B; }
-
-/* Menu de Abas */
-.tab-bar {
-    background-color: var(--tab-bg);
-    display: flex;
-    padding: 0 20px;
-}
-.tab-btn {
-    background: none;
-    border: none;
-    color: #93C5FD;
-    padding: 15px 25px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    border-bottom: 3px solid transparent;
-}
-.tab-btn:hover { color: white; background-color: rgba(255,255,255,0.05); }
-.tab-btn.active { color: white; border-bottom: 3px solid white; background-color: rgba(255,255,255,0.1); }
-
-/* Painéis de Conteúdo */
-.app-content { padding: 30px; flex-grow: 1; overflow-y: auto; }
-.panel { display: none; max-width: 1200px; margin: 0 auto; }
-.panel.active { display: block; animation: fadeIn 0.3s ease; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-/* =========================================================
-   CARDS, TABELAS E COMPONENTES
-========================================================= */
-.card {
-    background-color: var(--card-bg);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border-color);
-}
-.card h3 { margin-top: 0; color: var(--tab-bg); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; font-size: 16px; }
-
-/* Accordion (Sanfona dos Registros) */
-.accordion {
-    background-color: var(--tab-hover);
-    color: white;
-    cursor: pointer;
-    padding: 15px;
-    width: 100%;
-    border: none;
-    text-align: left;
-    outline: none;
-    font-size: 15px;
-    transition: 0.3s;
-    border-radius: 6px;
-    margin-top: 10px;
-    font-weight: bold;
-}
-.accordion.active, .accordion:hover { background-color: var(--tab-bg); }
-.accordion-panel {
-    padding: 0 15px;
-    background-color: white;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.2s ease-out;
-    border: 1px solid var(--border-color);
-    border-top: none;
-    border-radius: 0 0 6px 6px;
+.container { 
+    max-width: 800px; 
+    margin: 0 auto; 
+    background: #fff; 
+    min-height: 100vh; 
+    display: flex; 
+    flex-direction: column; 
+    box-shadow: 0 0 20px rgba(0,0,0,0.05); 
 }
 
-/* Toast */
-#toast {
-    visibility: hidden;
-    min-width: 250px;
-    background-color: var(--bg-login);
-    color: #fff;
-    text-align: center;
-    border-radius: 4px;
-    padding: 16px;
-    position: fixed;
-    z-index: 9999;
-    right: 30px;
-    bottom: 30px;
-    box-shadow: var(--shadow-md);
+.scroll-content {
+    flex: 1;
+    overflow-y: auto;
 }
-#toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-@keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-@keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+/* =======================================
+   BOTÕES DE TOPO
+======================================= */
+.btn-nav-top { 
+    background: rgba(255,255,255,0.1); 
+    border: 1px solid rgba(255,255,255,0.2); 
+    color: white; 
+    padding: 8px 12px; 
+    border-radius: 6px; 
+    cursor: pointer; 
+    font-size: 12px; 
+    font-weight: bold; 
+    transition: 0.3s; 
+}
+
+.btn-nav-top:hover { 
+    background: rgba(255,255,255,0.2); 
+}
+
+/* =======================================
+   FORMULÁRIOS E INPUTS
+======================================= */
+.form-box { 
+    background: white; 
+    padding: 20px; 
+    border-radius: 8px; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+    border: 1px solid #e0e0e0; 
+    margin-bottom: 20px; 
+}
+
+.grid-input { 
+    display: grid; 
+    grid-template-columns: 1fr; 
+    gap: 15px; 
+}
+
+@media (min-width: 600px) { 
+    .grid-input { grid-template-columns: 1fr 1fr; } 
+}
+
+label { 
+    display: block; 
+    font-size: 12px; 
+    font-weight: bold; 
+    color: #555; 
+    margin-bottom: 5px; 
+    text-transform: uppercase; 
+}
+
+input[type="text"], 
+input[type="number"], 
+input[type="date"], 
+input[type="email"], 
+input[type="password"], 
+select { 
+    width: 100%; 
+    padding: 12px; 
+    border: 1px solid #ccc; 
+    border-radius: 6px; 
+    font-size: 14px; 
+    background: #fff; 
+    transition: border-color 0.3s; 
+}
+
+input:focus, select:focus { 
+    border-color: #1565c0; 
+    outline: none; 
+}
+
+.input-login { 
+    width: 100%; 
+    padding: 15px; 
+    margin-bottom: 15px; 
+}
+
+/* =======================================
+   BOTÕES DE AÇÃO
+======================================= */
+.btn-action { 
+    width: 100%; 
+    padding: 15px; 
+    border: none; 
+    border-radius: 8px; 
+    font-size: 15px; 
+    font-weight: bold; 
+    color: white; 
+    cursor: pointer; 
+    transition: 0.3s; 
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-action:hover { 
+    opacity: 0.9; 
+    transform: translateY(-2px); 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.btn-green { background-color: #2e7d32; }
+
+/* =======================================
+   TABELAS E ALERTAS (TOAST)
+======================================= */
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    font-size: 13px; 
+}
+
+th { 
+    background: #1565c0; 
+    color: white; 
+    padding: 12px 10px; 
+    text-align: left; 
+    font-weight: 500; 
+}
+
+td { 
+    padding: 12px 10px; 
+    border-bottom: 1px solid #eee; 
+    color: #444; 
+}
+
+#toast { 
+    visibility: hidden; 
+    min-width: 250px; 
+    background-color: #323232; 
+    color: #fff; 
+    text-align: center; 
+    border-radius: 8px; 
+    padding: 16px; 
+    position: fixed; 
+    z-index: 9999; 
+    left: 50%; 
+    bottom: 30px; 
+    font-size: 15px; 
+    transform: translateX(-50%); 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4); 
+    opacity: 0; 
+    transition: opacity 0.4s, bottom 0.4s; 
+    font-weight: bold; 
+}
+
+#toast.show { 
+    visibility: visible; 
+    opacity: 1; 
+    bottom: 50px; 
+}
+/* =======================================
+   REGRAS DE IMPRESSÃO / EXPORTAÇÃO PDF
+======================================= */
+.onlyprint { display: none; }
+
+@media print {
+    body { background: white !important; margin: 0; padding: 0; }
+    .noprint { display: none !important; }
+    .onlyprint { display: block !important; }
+    .container { box-shadow: none; border: none; max-width: 100%; width: 100%; }
+    .scroll-content { overflow: visible !important; min-height: auto !important; background: white !important; }
+    .panel { padding: 0 !important; }
+    
+    /* Expande todas as sanfonas automaticamente no PDF */
+    .accordion { background-color: #f5f5f5 !important; color: #333 !important; border: 1px solid #ccc !important; font-size: 16px !important; }
+    .accordion::after { content: "" !important; }
+    .accordion-panel { max-height: none !important; border: none !important; padding: 0 !important; margin-bottom: 20px; }
+    
+    /* Remove a caixa do select para ficar como texto no PDF */
+    select { border: none !important; background: transparent !important; -webkit-appearance: none; appearance: none; color: black !important; font-weight: bold; }
+    
+    table { width: 100%; page-break-inside: auto; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    th { background-color: #eee !important; color: #333 !important; }
+}
