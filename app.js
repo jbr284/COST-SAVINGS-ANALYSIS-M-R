@@ -59,7 +59,7 @@ window.carregarTodosOsDados = async () => {
 };
 
 // ==========================================
-// CATEGORIAS CUSTOMIZADAS
+// MÓDULO DE CATEGORIAS CUSTOMIZADAS
 // ==========================================
 function getTodasCategorias() { return [...CATEGORIAS_PADRAO, ...window.categoriasExtras]; }
 function getCatLabel(val) { const found = getTodasCategorias().find(c => c.v === val); return found ? found.l : val.toUpperCase(); }
@@ -78,11 +78,9 @@ window.adicionarCategoria = async () => {
     
     const valorID = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '_');
     const labelVisual = `${emoji} ${nome}`;
-    
     if(getTodasCategorias().find(c => c.v === valorID)) return alert("Esta categoria já existe!");
 
     const novaCat = { id: `CAT-${Date.now()}`, v: valorID, l: labelVisual, emoji: emoji, nome: nome };
-    
     try {
         await setDoc(doc(db, "banco_categorias", novaCat.id), novaCat);
         window.categoriasExtras.push(novaCat);
@@ -179,16 +177,13 @@ window.processarArquivo = (event) => {
         return;
     }
     const ext = file.name.split('.').pop().toLowerCase();
-    
     window.mostrarToast(`Lendo arquivo ${ext.toUpperCase()}...`);
     const reader = new FileReader();
-    
     reader.onload = (e) => {
         if (ext === 'ofx') window.processarOFX(e.target.result, contaId);
         else if (ext === 'csv') window.processarCSV(e.target.result, contaId);
         document.getElementById('arquivoExtrato').value = ''; 
     };
-
     const encoding = ext === 'csv' ? 'UTF-8' : 'ISO-8859-1';
     reader.readAsText(file, encoding);
 };
@@ -206,9 +201,7 @@ window.processarOFX = (ofx, contaId) => {
             const d = dt[1].substring(0,8);
             const v = parseFloat(vl[1]);
             let desc = (mm && mm[1]) ? mm[1].trim() : ((nm && nm[1]) ? nm[1].trim() : "");
-            
             if (v === 0) continue;
-
             window.transacoesPendentes.push({
                 id: `TEMP-${Date.now()}-${i}`, data: `${d.substring(0,4)}-${d.substring(4,6)}-${d.substring(6,8)}`,
                 descricao: desc.substring(0,50), valor: v, tipo: v < 0 ? 'despesa' : 'receita', categoria: autoCategorizar(desc), contaOrigem: contaId
@@ -235,9 +228,7 @@ window.processarCSV = (csv, contaId) => {
 
                 let numCheck = cl.replace(/\s/g, '').toUpperCase();
                 if (numCheck.match(/^-?(R\$|BRL)?\d{1,3}(\.?\d{3})*,\d{2}$/) || numCheck.match(/^-?(R\$|BRL)?\d+(\.\d{2})$/)) {
-                    let v = limparMoedaCSV(cl); 
-                    vals.push(v); 
-                    return;
+                    let v = limparMoedaCSV(cl); vals.push(v); return;
                 }
 
                 if (!cl.match(/^[0-9\-\.]+$/) && cl !== '') descArr.push(cl);
@@ -245,7 +236,6 @@ window.processarCSV = (csv, contaId) => {
 
             if (data && vals.length > 0) {
                 if (descArr.some(d => ['SALDO','HISTÓRICO','DATA','VALOR'].includes(d.toUpperCase()))) return;
-                
                 let valor = vals[0];
                 if (valor === 0) return;
                 
@@ -285,12 +275,13 @@ function finalizarImportacao() {
 }
 
 // ==========================================
-// REGISTROS (COM SALDO CORRENTE V2.8)
+// REGISTROS: A MATEMÁTICA CORRETA (V2.9)
 // ==========================================
 window.renderizarRegistrosSalvos = () => {
     const containerSanfona = document.getElementById('area-sanfonas');
     const containerPend = document.getElementById('area-pendentes');
     
+    // PENDENTES NO TOPO
     if (window.transacoesPendentes.length > 0) {
         let htmlP = `<div style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
             <h4 style="color: #d84315; margin-top:0;">⚠️ ${window.transacoesPendentes.length} Lançamentos Pendentes</h4>
@@ -313,42 +304,65 @@ window.renderizarRegistrosSalvos = () => {
         containerPend.innerHTML = "";
     }
 
-    let tFiltradas = [...window.transacoes];
+    // LER VALORES DOS FILTROS
     const fConta = document.getElementById('filtroConta').value;
     const fCat = document.getElementById('filtroCategoria').value;
     const fTipo = document.getElementById('filtroTipo').value;
     const fOrdem = document.getElementById('filtroOrdem').value;
+
+    // 1º PASSO: ARRAY ABSOLUTO (Sem filtros de Categoria/Tipo, para garantir que a matemática do banco não quebra)
+    let trnsBaseBanco = [...window.transacoes];
+    if (fConta !== 'todas') {
+        trnsBaseBanco = trnsBaseBanco.filter(t => t.contaOrigem === fConta);
+    }
     
-    if (fConta !== 'todas') tFiltradas = tFiltradas.filter(t => t.contaOrigem === fConta);
-    if (fCat !== 'todas') tFiltradas = tFiltradas.filter(t => t.categoria === fCat);
-    if (fTipo !== 'todos') tFiltradas = tFiltradas.filter(t => t.tipo === fTipo);
+    // Organiza toda a vida financeira do mais antigo para o mais novo
+    trnsBaseBanco.sort((a,b) => a.data.localeCompare(b.data));
 
-    // V2.8: ORDENAÇÃO CRONOLÓGICA PARA CALCULAR O SALDO CORRENTE (Do mais antigo para o mais novo)
-    tFiltradas.sort((a,b) => new Date(a.data) - new Date(b.data));
+    const gruposInfo = {};
+    let saldoRealAcumulado = 0;
 
-    const grupos = {};
-    let saldoAcumulado = 0; // O nosso cofre acumulativo
-
-    tFiltradas.forEach(t => {
+    // 2º PASSO: CALCULAR O SALDO REAL E CRONOLÓGICO DA CONTA
+    trnsBaseBanco.forEach(t => {
         const [a, m] = t.data.split('-');
         const mesAno = `${m}/${a}`;
-        
-        if(!grupos[mesAno]) grupos[mesAno] = { trns: [], resultadoMes: 0, saldoFinal: 0 };
-        
-        grupos[mesAno].trns.push(t);
-        grupos[mesAno].resultadoMes += t.valor; // Soma apenas o que aconteceu naquele mês
-        
-        saldoAcumulado += t.valor; // Soma tudo desde o início dos tempos
-        grupos[mesAno].saldoFinal = saldoAcumulado; // Guarda a "fotografia" do saldo no final deste mês
+
+        if(!gruposInfo[mesAno]) {
+            gruposInfo[mesAno] = { 
+                saldoInicial: saldoRealAcumulado, 
+                resultadoMes: 0, 
+                saldoFinal: 0,
+                trnsFiltradas: [] // Onde vamos guardar as transações que o utilizador realmente quer ver
+            };
+        }
+        gruposInfo[mesAno].resultadoMes += t.valor;
+        saldoRealAcumulado += t.valor;
+        gruposInfo[mesAno].saldoFinal = saldoRealAcumulado;
     });
 
-    if (Object.keys(grupos).length === 0) {
-        containerSanfona.innerHTML = "<p style='text-align:center; color:#666;'>Nenhum registro encontrado para este filtro.</p>";
+    // 3º PASSO: APLICAR OS FILTROS VISUAIS (Apenas no que será exibido na tabela)
+    trnsBaseBanco.forEach(t => {
+        let passaFiltro = true;
+        if (fCat !== 'todas' && t.categoria !== fCat) passaFiltro = false;
+        if (fTipo !== 'todos' && t.tipo !== fTipo) passaFiltro = false;
+
+        if (passaFiltro) {
+            const [a, m] = t.data.split('-');
+            const mesAno = `${m}/${a}`;
+            gruposInfo[mesAno].trnsFiltradas.push(t);
+        }
+    });
+
+    // Filtra as sanfonas para remover meses que não têm transações após o filtro
+    const chavesComDados = Object.keys(gruposInfo).filter(k => gruposInfo[k].trnsFiltradas.length > 0);
+
+    if (chavesComDados.length === 0) {
+        containerSanfona.innerHTML = "<p style='text-align:center; color:#666; font-size:14px;'>Nenhum registro encontrado para estes filtros.</p>";
         return;
     }
 
-    // PARA EXIBIR, ORDENAMOS DO MÊS MAIS RECENTE PARA O MAIS ANTIGO
-    const chavesOrdenadas = Object.keys(grupos).sort((a, b) => {
+    // Ordenar as Sanfonas do Mês mais Novo para o mais Antigo
+    chavesComDados.sort((a, b) => {
         const [ma, aa] = a.split('/'); const [mb, ab] = b.split('/');
         return new Date(`${ab}-${mb}-01`) - new Date(`${aa}-${ma}-01`);
     });
@@ -356,15 +370,16 @@ window.renderizarRegistrosSalvos = () => {
     const mesesNomes = {'01':'Janeiro','02':'Fevereiro','03':'Março','04':'Abril','05':'Maio','06':'Junho','07':'Julho','08':'Agosto','09':'Setembro','10':'Outubro','11':'Novembro','12':'Dezembro'};
     let htmlS = "";
     
-    for (let mesAno of chavesOrdenadas) {
+    // 4º PASSO: RENDERIZAR ESTRUTURA
+    for (let mesAno of chavesComDados) {
         const [m, a] = mesAno.split('/');
-        let grupo = grupos[mesAno];
-        let trns = grupo.trns;
+        const grupo = gruposInfo[mesAno];
+        let trns = grupo.trnsFiltradas;
         
-        // Aplica a ordenação que o usuário escolheu APENAS visualmente dentro do mês
+        // Aplica a ordem escolhida apenas dentro das linhas do mês
         trns.sort((itemA, itemB) => {
-            if (fOrdem === 'data_desc') return new Date(itemB.data) - new Date(itemA.data);
-            if (fOrdem === 'data_asc') return new Date(itemA.data) - new Date(itemB.data);
+            if (fOrdem === 'data_desc') return itemB.data.localeCompare(itemA.data);
+            if (fOrdem === 'data_asc') return itemA.data.localeCompare(itemB.data);
             if (fOrdem === 'valor_desc') return Math.abs(itemB.valor) - Math.abs(itemA.valor);
             if (fOrdem === 'valor_asc') return Math.abs(itemA.valor) - Math.abs(itemB.valor);
             if (fOrdem === 'az') return itemA.descricao.localeCompare(itemB.descricao);
@@ -372,19 +387,36 @@ window.renderizarRegistrosSalvos = () => {
             return 0;
         });
 
-        // Cores de alto contraste para o fundo azul da sanfona
-        let corRes = grupo.resultadoMes >= 0 ? '#81c784' : '#ef5350'; 
-        let corSaldo = grupo.saldoFinal >= 0 ? '#81c784' : '#ef5350';
+        const isFiltered = (fCat !== 'todas' || fTipo !== 'todos');
+        const somaVisivel = trns.reduce((acc, curr) => acc + curr.valor, 0);
 
-        // O NOVO CABEÇALHO DIVIDIDO
-        htmlS += `<button class="accordion" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
-                    <div style="flex: 1; min-width: 120px;">${mesesNomes[m]} de ${a}</div>
-                    <div style="font-size: 12px; font-weight: normal; color: #bbdefb; border-right: 1px solid rgba(255,255,255,0.3); padding-right: 15px; margin-right: 5px;">
-                        Mês: <span style="color:${corRes}; font-weight:bold;">R$ ${grupo.resultadoMes.toFixed(2)}</span>
+        const corIni = grupo.saldoInicial >= 0 ? '#81c784' : '#ef5350';
+        const corRes = grupo.resultadoMes >= 0 ? '#81c784' : '#ef5350';
+        const corFin = grupo.saldoFinal >= 0 ? '#81c784' : '#ef5350';
+        const corVis = somaVisivel >= 0 ? '#81c784' : '#ef5350';
+
+        let blocoSaldos = `
+            <div style="font-size: 11px; color: rgba(255,255,255,0.8); display:flex; gap: 15px; flex-wrap: wrap;">
+                <div>Saldo Ant: <span style="color:${corIni}; font-weight:bold;">R$ ${grupo.saldoInicial.toFixed(2)}</span></div>
+                <div>Mov. do Mês: <span style="color:${corRes}; font-weight:bold;">R$ ${grupo.resultadoMes.toFixed(2)}</span></div>
+                <div style="font-size: 13px;">Saldo Final: <span style="color:${corFin}; font-weight:900;">R$ ${grupo.saldoFinal.toFixed(2)}</span></div>
+            </div>
+        `;
+
+        if (isFiltered) {
+            blocoSaldos = `
+                <div style="font-size: 11px; color: rgba(255,255,255,0.8); display:flex; gap: 15px; flex-wrap: wrap; align-items:center;">
+                    <div>Soma do Filtro Atual: <span style="color:${corVis}; font-weight:bold;">R$ ${somaVisivel.toFixed(2)}</span></div>
+                    <div style="border-left:1px solid #7ea1c4; padding-left:15px; font-size: 13px;">
+                        Saldo Final da Conta: <span style="color:${corFin}; font-weight:900;">R$ ${grupo.saldoFinal.toFixed(2)}</span>
                     </div>
-                    <div style="font-size: 14px;">
-                        Saldo Final: <span style="color:${corSaldo}; font-weight:900;">R$ ${grupo.saldoFinal.toFixed(2)}</span>
-                    </div>
+                </div>
+            `;
+        }
+
+        htmlS += `<button class="accordion" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div style="font-size: 14px; min-width: 130px;">${mesesNomes[m]} / ${a}</div>
+                    ${blocoSaldos}
                   </button>
                   <div class="accordion-panel">
                     <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0;">
@@ -557,7 +589,7 @@ window.adicionarLancamentoAvulso = async () => {
 };
 
 // ==========================================
-// MÓDULO 3: DASHBOARD EXECUTIVO COM ALTO CONTRASTE
+// MÓDULO 3: DASHBOARD EXECUTIVO
 // ==========================================
 window.renderizarDashboard = () => {
     const container = document.getElementById('painel-dashboard-content');
@@ -690,7 +722,7 @@ window.renderizarDashboard = () => {
 };
 
 // ==========================================
-// FUNÇÕES AUXILIARES (CONTAS, NAVEGAÇÃO, AUTH)
+// FUNÇÕES AUXILIARES E NAVEGAÇÃO
 // ==========================================
 window.renderizarDropdownContas = () => { 
     const selC = document.getElementById('contaImportacao');
