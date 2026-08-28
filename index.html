@@ -160,15 +160,17 @@
                     <div><label>Data:</label><input type="date" id="avulsoData"></div>
                     <div><label>Valor (R$):</label><input type="number" id="avulsoValor" placeholder="0.00"></div>
                 </div>
-                <div class="grid-input" style="grid-template-columns: 1fr 1fr; margin-top: 10px;">
-                    <div><label>Descrição:</label><input type="text" id="avulsoDesc" placeholder="Ex: Saldo Inicial"></div>
-                    <div>
-                        <label>Tipo:</label>
+                <div class="grid-input" style="grid-template-columns: 1fr 1fr 1fr; margin-top: 10px; gap: 10px;">
+                    <div style="grid-column: span 1;"><label>Tipo:</label>
                         <select id="avulsoTipo">
-                            <option value="despesa">Saída (Despesa)</option>
                             <option value="receita">Entrada (Receita)</option>
+                            <option value="despesa">Saída (Despesa)</option>
                         </select>
                     </div>
+                    <div style="grid-column: span 1;"><label>Conta Destino:</label>
+                        <select id="avulsoConta"><option value="Manual">Geral / Manual</option></select>
+                    </div>
+                    <div style="grid-column: span 1;"><label>Descrição:</label><input type="text" id="avulsoDesc" placeholder="Ex: Saldo Inicial"></div>
                 </div>
                 <button class="btn-action" style="background-color: #f57c00; margin-top: 15px;" onclick="window.adicionarLancamentoAvulso()">➕ Adicionar Lançamento</button>
             </div>
@@ -232,8 +234,7 @@
             
             <hr style="margin: 40px 0 30px 0; border: 0; border-top: 2px dashed #ccc;">
 
-            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Gestão de Categorias Customizadas</h3>
-            <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Faltou alguma opção no sistema? Crie as suas próprias categorias com emojis nativos da biblioteca.</p>
+            <h3 style="color:#0d47a1; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-top:0;">Categorias Customizadas</h3>
             <div class="form-box">
                 <h4 style="color: #f57c00; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #ffe0b2; padding-bottom: 5px;">Nova Categoria</h4>
                 <div class="grid-input" style="grid-template-columns: minmax(100px, 1fr) 3fr;">
@@ -272,8 +273,15 @@
                 </div>
                 <button class="btn-action" style="background-color: #1565c0; margin-top: 15px;" onclick="window.adicionarCategoria()">➕ Adicionar Categoria</button>
             </div>
-            <h3 style="color:#0d47a1; margin-bottom: 5px;">Categorias Customizadas</h3>
+            <h3 style="color:#0d47a1; margin-bottom: 5px;">Suas Categorias</h3>
             <div id="lista-categorias-container"></div>
+
+            <hr style="margin: 40px 0 30px 0; border: 0; border-top: 2px dashed #ccc;">
+
+            <!-- ZONA DE PERIGO PARA RESETAR O BANCO DE DADOS -->
+            <h3 style="color:#c62828; border-bottom: 2px solid #ffcdd2; padding-bottom: 10px; margin-top:0;">⚠️ Zona de Perigo</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Fez testes e duplicou lançamentos? Use este botão para limpar todo o seu histórico financeiro e começar de novo. (Suas contas e categorias não serão apagadas).</p>
+            <button class="btn-action" style="background-color: #d32f2f;" onclick="window.apagarTodoOExtrato()">🧹 APAGAR TODOS OS LANÇAMENTOS DO SISTEMA</button>
 
         </div>
 
@@ -284,6 +292,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
   
-  <script type="module" src="app.js?v=2.6"></script>
+  <script type="module" src="app.js?v=3.0"></script>
 </body>
 </html>
