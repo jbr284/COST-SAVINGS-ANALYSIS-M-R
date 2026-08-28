@@ -82,8 +82,9 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
   box-shadow: 0 4px 6px rgba(46, 125, 50, 0.3);
   margin-top: 10px;
 }
-.btn-login:hover { background-color: var(--btn-primary-hover); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(46, 125, 50, 0.4); }
-.btn-login:active { transform: translateY(1px); box-shadow: var(--shadow-sm); }
+.btn-login:disabled { background-color: #94A3B8; cursor: not-allowed; box-shadow: none; }
+.btn-login:hover:not(:disabled) { background-color: var(--btn-primary-hover); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(46, 125, 50, 0.4); }
+.btn-login:active:not(:disabled) { transform: translateY(1px); box-shadow: var(--shadow-sm); }
 
 /* =========================================================================
    2. HALL DE ENTRADA (DASHBOARD HUB)
@@ -102,7 +103,7 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
   content: "";
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(15, 23, 42, 0.75); /* Película escura sobre a imagem */
+  background: rgba(15, 23, 42, 0.75); 
   z-index: 1;
 }
 .hall-content {
@@ -127,7 +128,7 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
   padding: 18px;
   margin-bottom: 15px;
   border: none;
-  border-radius: 4px; /* Estritamente Retangular */
+  border-radius: 4px; 
   font-size: 14px;
   font-weight: 800;
   color: #ffffff;
@@ -139,7 +140,6 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
 }
 .btn-hall:hover { filter: brightness(1.15); transform: translateY(-2px); }
 
-/* Cores Semânticas dos Botões do Hall */
 .btn-hall-blue   { background-color: #1E3A8A; }
 .btn-hall-green  { background-color: #2E7D32; }
 .btn-hall-orange { background-color: #D97706; }
@@ -189,7 +189,7 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Elementos Padrão Internos (Cards, Botões Genéricos, Modais) */
+/* Elementos Padrão Internos */
 .card {
   background-color: var(--card-bg); border-radius: var(--radius); padding: 25px;
   margin-bottom: 25px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);
@@ -199,7 +199,7 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
 .btn { background-color: var(--btn-primary); color: #fff; border: none; padding: 12px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; }
 .btn:hover { background-color: var(--btn-primary-hover); }
 
-/* Accordion de Registros e Sanfonas */
+/* Accordion de Registros */
 .accordion { background-color: var(--tab-hover); color: white; cursor: pointer; padding: 15px; width: 100%; border: none; text-align: left; outline: none; font-size: 15px; transition: 0.3s; border-radius: 6px; margin-top: 10px; font-weight: bold; }
 .accordion.active, .accordion:hover { background-color: var(--tab-bg); }
 .accordion-panel { padding: 0 15px; background-color: white; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 6px 6px; }
