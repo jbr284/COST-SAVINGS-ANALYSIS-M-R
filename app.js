@@ -158,10 +158,9 @@ window.renderizarCategoriasConfig = () => {
 };
 
 // ==========================================
-// IMPORTAÇÃO E CAÇADOR INTELIGENTE (ATUALIZADO V3.4 - PICPAY)
+// IMPORTAÇÃO E CAÇADOR INTELIGENTE (ATUALIZADO V3.5)
 // ==========================================
 function limparMoedaCSV(val) {
-    // V3.4: Adicionado o \+ na expressão regular para remover o sinal de MAIS antes de processar
     let n = val.toString().replace(/[R\$\s\+]/gi, '').trim();
     if (n.includes('.') && n.includes(',')) n = n.replace(/\./g, '').replace(',', '.');
     else if (n.includes(',')) n = n.replace(',', '.'); 
@@ -234,11 +233,18 @@ window.processarCSV = (csv, contaId) => {
                 if (!data && dM) { data = dM[1]; return; }
 
                 let numCheck = cl.replace(/\s/g, '').toUpperCase();
-                // V3.4: Alteração do ^-? para ^[+-]? para engolir sinais positivos nativos do PicPay
-                if (/^[+-]?(R\$|BRL|U\$|\$)?\d{1,3}(\.?\d{3})*,\d{1,2}$/.test(numCheck) || 
-                    /^[+-]?(R\$|BRL|U\$|\$)?\d{1,3}(,?\d{3})*\.\d{1,2}$/.test(numCheck) ||
-                    (/^[+-]?\d+$/.test(numCheck) && numCheck.length <= 7)) { 
-                    let v = limparMoedaCSV(cl); vals.push(v); return;
+                
+                // V3.5: O Filtro de Titânio. Só aceita números se forem obviamente dinheiro (com casas decimais) 
+                // OU se o número inteiro estiver explicitamente acompanhado por R$ ou $
+                let isMoney = false;
+                if (/^[+-]?(R\$|BRL|U\$|\$)?\d{1,3}(\.?\d{3})*,\d{1,2}$/.test(numCheck)) isMoney = true;
+                else if (/^[+-]?(R\$|BRL|U\$|\$)?\d{1,3}(,?\d{3})*\.\d{1,2}$/.test(numCheck)) isMoney = true;
+                else if (/^[+-]?(R\$|BRL|U\$|\$)\d+$/.test(numCheck)) isMoney = true;
+
+                if (isMoney) { 
+                    let v = limparMoedaCSV(cl); 
+                    vals.push(v); 
+                    return;
                 }
 
                 if (!cl.match(/^[0-9\-\.]+$/) && cl !== '') descArr.push(cl);
@@ -285,7 +291,7 @@ function finalizarImportacao() {
 }
 
 // ==========================================
-// REGISTROS 
+// REGISTROS (A MATEMÁTICA PURA E SANFONA LIMPA)
 // ==========================================
 window.renderizarRegistrosSalvos = () => {
     const containerSanfona = document.getElementById('area-sanfonas');
@@ -416,7 +422,7 @@ window.renderizarRegistrosSalvos = () => {
                     <span class="onlyprint">${getCatLabel(t.categoria)}</span>
                 </td>
                 <td class="noprint" style="padding: 10px 5px; text-align: center; width: 15%;">
-                    ${t.contaOrigem !== 'API' ? `<button style="background:none; border:none; cursor:pointer; font-size:16px; margin-right:8px;" onclick="window.abrirModalEdicao('${t.id}')" title="Editar">✏️</button>` : ''}
+                    ${t.contaOrigem === 'Manual' ? `<button style="background:none; border:none; cursor:pointer; font-size:16px; margin-right:8px;" onclick="window.abrirModalEdicao('${t.id}')" title="Editar">✏️</button>` : ''}
                     <button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="window.excluirLancamento('${t.id}')" title="Excluir">🗑️</button>
                 </td>
             </tr>`;
