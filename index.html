@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cost Savings Analysis M&R</title>
   
+  <!-- Previne o erro 404 do Favicon -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
+  
   <link rel="stylesheet" href="style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -29,7 +32,7 @@
         <label for="senhaLogin">Senha de Acesso</label>
         <input type="password" id="senhaLogin" placeholder="••••••••">
       </div>
-      <button onclick="window.fazerLogin()" class="btn-login">ENTRAR NO SISTEMA</button>
+      <button onclick="window.fazerLogin()" class="btn-login" id="btnAcesso">ENTRAR NO SISTEMA</button>
     </div>
   </div>
 
@@ -58,7 +61,7 @@
     <main class="app-content" id="app-content">
 
       <!-- =========================================
-           PAINEL ZERO: HALL DE ENTRADA (NOVO)
+           PAINEL ZERO: HALL DE ENTRADA
       ========================================= -->
       <div id="painel-home" class="panel">
         <div class="hall-wrapper">
@@ -145,7 +148,7 @@
       </div>
 
       <!-- =========================================
-           PAINEL 4: CONFIGURAÇÕES (V3.5 COMPLETO)
+           PAINEL 4: CONFIGURAÇÕES
       ========================================= -->
       <div id="painel-configuracoes" class="panel">
         <div class="card">
@@ -230,10 +233,8 @@
     </div>
   </div>
 
-  <!-- Componente Toast de Notificação -->
   <div id="toast">Operação Realizada!</div>
 
-  <!-- Core JavaScript -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
