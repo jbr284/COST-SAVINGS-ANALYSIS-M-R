@@ -3,7 +3,7 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getFirestore, collection, getDocs, getDoc, setDoc, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCNHOPKa320_cYOKUY8vBVVYRmcYkmWo0Y",
+  apiKey: "AIzaSyCNHOPKa320_cY0KUY8vBVVYRmcYkmWo0Y",
   authDomain: "bd-saripan.firebaseapp.com",
   projectId: "bd-saripan",
   storageBucket: "bd-saripan.firebasestorage.app",
