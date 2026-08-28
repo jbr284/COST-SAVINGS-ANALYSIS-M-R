@@ -158,7 +158,7 @@ window.renderizarCategoriasConfig = () => {
 };
 
 // ==========================================
-// IMPORTAÇÃO E CAÇADOR INTELIGENTE (ATUALIZADO V3.1)
+// IMPORTAÇÃO E CAÇADOR INTELIGENTE (ATUALIZADO V3.2)
 // ==========================================
 function limparMoedaCSV(val) {
     let n = val.toString().replace(/[R\$\s]/gi, '').trim();
@@ -221,56 +221,52 @@ window.processarCSV = (csv, contaId) => {
             
             cols.forEach(col => {
                 if(typeof col !== 'string') return;
-                // Padroniza os traços da web para sinal de menos real
                 let cl = col.trim().replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-');
                 if(!cl) return;
 
                 let up = cl.toUpperCase();
-                // Identifica se é o cabeçalho chato do Mercado Pago
-                if (up === 'DATA' || up.includes('DATA DE') || up === 'VALOR' || up === 'HISTÓRICO' || up === 'HISTORICO' || up === 'LÍQUIDO') {
+                // Novos termos do Mercado Pago em inglês e português adicionados ao filtro de cabeçalhos
+                if (up === 'DATA' || up.includes('DATA DE') || up === 'VALOR' || up === 'HISTÓRICO' || up === 'HISTORICO' || up === 'LÍQUIDO' || up === 'RELEASE_DATE' || up === 'INITIAL_BALANCE') {
                     isHeaderRow = true;
                 }
 
-                // Tenta achar a Data (Nova Regra: aceita dias e meses com apenas 1 dígito)
-                let dM = cl.match(/(?:^|\s)(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{1,2}-\d{1,2})(?:$|\s|T)/);
+                // V3.2 - Expressão regular expandida para encontrar datas com traços estranhos (DD-MM-YYYY) ou barras.
+                let dM = cl.match(/(?:^|\s)(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})(?:$|\s|T)/);
                 if (!data && dM) { data = dM[1]; return; }
 
-                // Tenta achar o Valor monetário real (Nova Regra: aceita inteiros e flexibiliza decimais)
                 let numCheck = cl.replace(/\s/g, '').toUpperCase();
                 if (/^-?(R\$|BRL|U\$|\$)?\d{1,3}(\.?\d{3})*,\d{1,2}$/.test(numCheck) || 
                     /^-?(R\$|BRL|U\$|\$)?\d{1,3}(,?\d{3})*\.\d{1,2}$/.test(numCheck) ||
-                    (/^-?\d+$/.test(numCheck) && numCheck.length <= 6)) { // Limite de 6 casas evita ler IDs de transação
+                    (/^-?\d+$/.test(numCheck) && numCheck.length <= 6)) { 
                     let v = limparMoedaCSV(cl); 
                     vals.push(v); 
                     return;
                 }
 
-                // O que sobra e não for apenas números misturados vira texto de descrição
                 if (!cl.match(/^[0-9\-\.]+$/) && cl !== '') descArr.push(cl);
             });
 
-            // Se o sistema detetou que esta linha tem títulos, ignora a linha toda
             if (isHeaderRow) return;
 
             if (data && vals.length > 0) {
-                let valor = vals[0]; // Pega o primeiro valor da linha
-                if (valor === 0) return; // Ignora transações zeradas
+                let valor = vals[0]; 
+                if (valor === 0) return; 
                 
-                // Limpa lixo do Mercado Pago da descrição
                 descArr = descArr.filter(d => !['Aprovado','Concluído','Saldo','Cartão', 'Pix'].includes(d));
-                descArr = descArr.filter(d => !d.match(/^\d{1,2}:\d{2}(:\d{2})?$/)); // Remove horas isoladas
+                descArr = descArr.filter(d => !d.match(/^\d{1,2}:\d{2}(:\d{2})?$/)); 
                 
                 let desc = descArr.sort((a,b)=>b.length - a.length)[0] || "Sem descrição";
                 
-                // Formatação blindada de Data para YYYY-MM-DD
+                // V3.2 - Formatação de Data Flexível (Converte DD-MM-YYYY ou YYYY-MM-DD para banco)
                 let dF = data;
-                if (data.includes('/')) {
-                    let p = data.split('/');
-                    let dia = p[0].padStart(2, '0');
-                    let mes = p[1].padStart(2, '0');
-                    let ano = p[2];
-                    if(ano.length === 2) ano = "20" + ano;
-                    dF = `${ano}-${mes}-${dia}`;
+                let sep = data.includes('/') ? '/' : '-';
+                let p = data.split(sep);
+                
+                if (p[0].length === 4) { // Veio YYYY-MM-DD
+                    dF = `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
+                } else { // Veio DD-MM-YYYY ou DD/MM/YYYY
+                    let ano = p[2].length === 2 ? "20" + p[2] : p[2];
+                    dF = `${ano}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
                 }
                 
                 window.transacoesPendentes.push({
@@ -304,7 +300,6 @@ window.renderizarRegistrosSalvos = () => {
     const containerSanfona = document.getElementById('area-sanfonas');
     const containerPend = document.getElementById('area-pendentes');
     
-    // PENDENTES NO TOPO
     if (window.transacoesPendentes.length > 0) {
         let htmlP = `<div style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
             <h4 style="color: #d84315; margin-top:0;">⚠️ ${window.transacoesPendentes.length} Lançamentos Pendentes</h4>
@@ -327,25 +322,21 @@ window.renderizarRegistrosSalvos = () => {
         containerPend.innerHTML = "";
     }
 
-    // LER VALORES DOS FILTROS
     const fConta = document.getElementById('filtroConta').value;
     const fCat = document.getElementById('filtroCategoria').value;
     const fTipo = document.getElementById('filtroTipo').value;
     const fOrdem = document.getElementById('filtroOrdem').value;
 
-    // 1º PASSO: ARRAY ABSOLUTO PARA SALDO (Sem filtros de tela)
     let trnsBaseBanco = [...window.transacoes];
     if (fConta !== 'todas') {
         trnsBaseBanco = trnsBaseBanco.filter(t => t.contaOrigem === fConta);
     }
     
-    // Organiza toda a vida financeira do mais antigo para o mais novo
     trnsBaseBanco.sort((a,b) => a.data.localeCompare(b.data));
 
     const gruposInfo = {};
     let saldoRealAcumulado = 0;
 
-    // 2º PASSO: CALCULAR O SALDO REAL
     trnsBaseBanco.forEach(t => {
         const [a, m] = t.data.split('-');
         const mesAno = `${m}/${a}`;
@@ -357,7 +348,6 @@ window.renderizarRegistrosSalvos = () => {
         gruposInfo[mesAno].saldoFinal = saldoRealAcumulado;
     });
 
-    // 3º PASSO: APLICAR OS FILTROS VISUAIS 
     trnsBaseBanco.forEach(t => {
         let passaFiltro = true;
         if (fCat !== 'todas' && t.categoria !== fCat) passaFiltro = false;
@@ -385,7 +375,6 @@ window.renderizarRegistrosSalvos = () => {
     const mesesNomes = {'01':'Janeiro','02':'Fevereiro','03':'Março','04':'Abril','05':'Maio','06':'Junho','07':'Julho','08':'Agosto','09':'Setembro','10':'Outubro','11':'Novembro','12':'Dezembro'};
     let htmlS = "";
     
-    // 4º PASSO: RENDERIZAR ESTRUTURA
     for (let mesAno of chavesComDados) {
         const [m, a] = mesAno.split('/');
         const grupo = gruposInfo[mesAno];
@@ -403,7 +392,6 @@ window.renderizarRegistrosSalvos = () => {
 
         const corFin = grupo.saldoFinal >= 0 ? '#81c784' : '#ef5350';
 
-        // CABEÇALHO LIMPO EXATAMENTE COMO PEDIDO
         htmlS += `<button class="accordion" style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="font-size: 16px;">${mesesNomes[m]} / ${a}</div>
                     <div style="font-size: 16px; font-weight: normal;">
