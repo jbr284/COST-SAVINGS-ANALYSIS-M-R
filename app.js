@@ -59,7 +59,7 @@ window.carregarTodosOsDados = async () => {
 };
 
 // ==========================================
-// MÓDULO DE CATEGORIAS CUSTOMIZADAS
+// MÓDULO DE CATEGORIAS
 // ==========================================
 function getTodasCategorias() { return [...CATEGORIAS_PADRAO, ...window.categoriasExtras]; }
 function getCatLabel(val) { const found = getTodasCategorias().find(c => c.v === val); return found ? found.l : val.toUpperCase(); }
@@ -275,7 +275,7 @@ function finalizarImportacao() {
 }
 
 // ==========================================
-// REGISTROS: A MATEMÁTICA CORRETA (V2.9)
+// REGISTROS (V3.0 - A MATEMÁTICA PURA E SANFONA LIMPA)
 // ==========================================
 window.renderizarRegistrosSalvos = () => {
     const containerSanfona = document.getElementById('area-sanfonas');
@@ -310,7 +310,7 @@ window.renderizarRegistrosSalvos = () => {
     const fTipo = document.getElementById('filtroTipo').value;
     const fOrdem = document.getElementById('filtroOrdem').value;
 
-    // 1º PASSO: ARRAY ABSOLUTO (Sem filtros de Categoria/Tipo, para garantir que a matemática do banco não quebra)
+    // 1º PASSO: ARRAY ABSOLUTO PARA SALDO (Sem filtros de tela)
     let trnsBaseBanco = [...window.transacoes];
     if (fConta !== 'todas') {
         trnsBaseBanco = trnsBaseBanco.filter(t => t.contaOrigem === fConta);
@@ -322,25 +322,19 @@ window.renderizarRegistrosSalvos = () => {
     const gruposInfo = {};
     let saldoRealAcumulado = 0;
 
-    // 2º PASSO: CALCULAR O SALDO REAL E CRONOLÓGICO DA CONTA
+    // 2º PASSO: CALCULAR O SALDO REAL
     trnsBaseBanco.forEach(t => {
         const [a, m] = t.data.split('-');
         const mesAno = `${m}/${a}`;
 
         if(!gruposInfo[mesAno]) {
-            gruposInfo[mesAno] = { 
-                saldoInicial: saldoRealAcumulado, 
-                resultadoMes: 0, 
-                saldoFinal: 0,
-                trnsFiltradas: [] // Onde vamos guardar as transações que o utilizador realmente quer ver
-            };
+            gruposInfo[mesAno] = { saldoFinal: 0, trnsFiltradas: [] };
         }
-        gruposInfo[mesAno].resultadoMes += t.valor;
         saldoRealAcumulado += t.valor;
         gruposInfo[mesAno].saldoFinal = saldoRealAcumulado;
     });
 
-    // 3º PASSO: APLICAR OS FILTROS VISUAIS (Apenas no que será exibido na tabela)
+    // 3º PASSO: APLICAR OS FILTROS VISUAIS 
     trnsBaseBanco.forEach(t => {
         let passaFiltro = true;
         if (fCat !== 'todas' && t.categoria !== fCat) passaFiltro = false;
@@ -353,7 +347,6 @@ window.renderizarRegistrosSalvos = () => {
         }
     });
 
-    // Filtra as sanfonas para remover meses que não têm transações após o filtro
     const chavesComDados = Object.keys(gruposInfo).filter(k => gruposInfo[k].trnsFiltradas.length > 0);
 
     if (chavesComDados.length === 0) {
@@ -361,7 +354,6 @@ window.renderizarRegistrosSalvos = () => {
         return;
     }
 
-    // Ordenar as Sanfonas do Mês mais Novo para o mais Antigo
     chavesComDados.sort((a, b) => {
         const [ma, aa] = a.split('/'); const [mb, ab] = b.split('/');
         return new Date(`${ab}-${mb}-01`) - new Date(`${aa}-${ma}-01`);
@@ -376,7 +368,6 @@ window.renderizarRegistrosSalvos = () => {
         const grupo = gruposInfo[mesAno];
         let trns = grupo.trnsFiltradas;
         
-        // Aplica a ordem escolhida apenas dentro das linhas do mês
         trns.sort((itemA, itemB) => {
             if (fOrdem === 'data_desc') return itemB.data.localeCompare(itemA.data);
             if (fOrdem === 'data_asc') return itemA.data.localeCompare(itemB.data);
@@ -387,36 +378,14 @@ window.renderizarRegistrosSalvos = () => {
             return 0;
         });
 
-        const isFiltered = (fCat !== 'todas' || fTipo !== 'todos');
-        const somaVisivel = trns.reduce((acc, curr) => acc + curr.valor, 0);
-
-        const corIni = grupo.saldoInicial >= 0 ? '#81c784' : '#ef5350';
-        const corRes = grupo.resultadoMes >= 0 ? '#81c784' : '#ef5350';
         const corFin = grupo.saldoFinal >= 0 ? '#81c784' : '#ef5350';
-        const corVis = somaVisivel >= 0 ? '#81c784' : '#ef5350';
 
-        let blocoSaldos = `
-            <div style="font-size: 11px; color: rgba(255,255,255,0.8); display:flex; gap: 15px; flex-wrap: wrap;">
-                <div>Saldo Ant: <span style="color:${corIni}; font-weight:bold;">R$ ${grupo.saldoInicial.toFixed(2)}</span></div>
-                <div>Mov. do Mês: <span style="color:${corRes}; font-weight:bold;">R$ ${grupo.resultadoMes.toFixed(2)}</span></div>
-                <div style="font-size: 13px;">Saldo Final: <span style="color:${corFin}; font-weight:900;">R$ ${grupo.saldoFinal.toFixed(2)}</span></div>
-            </div>
-        `;
-
-        if (isFiltered) {
-            blocoSaldos = `
-                <div style="font-size: 11px; color: rgba(255,255,255,0.8); display:flex; gap: 15px; flex-wrap: wrap; align-items:center;">
-                    <div>Soma do Filtro Atual: <span style="color:${corVis}; font-weight:bold;">R$ ${somaVisivel.toFixed(2)}</span></div>
-                    <div style="border-left:1px solid #7ea1c4; padding-left:15px; font-size: 13px;">
-                        Saldo Final da Conta: <span style="color:${corFin}; font-weight:900;">R$ ${grupo.saldoFinal.toFixed(2)}</span>
+        // CABEÇALHO LIMPO EXATAMENTE COMO PEDIDO
+        htmlS += `<button class="accordion" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 16px;">${mesesNomes[m]} / ${a}</div>
+                    <div style="font-size: 16px; font-weight: normal;">
+                        Saldo Atual: <span style="color:${corFin}; font-weight:900;">R$ ${grupo.saldoFinal.toFixed(2)}</span>
                     </div>
-                </div>
-            `;
-        }
-
-        htmlS += `<button class="accordion" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                    <div style="font-size: 14px; min-width: 130px;">${mesesNomes[m]} / ${a}</div>
-                    ${blocoSaldos}
                   </button>
                   <div class="accordion-panel">
                     <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0;">
@@ -445,7 +414,7 @@ window.renderizarRegistrosSalvos = () => {
                     <span class="onlyprint">${getCatLabel(t.categoria)}</span>
                 </td>
                 <td class="noprint" style="padding: 10px 5px; text-align: center; width: 15%;">
-                    ${t.contaOrigem === 'Manual' ? `<button style="background:none; border:none; cursor:pointer; font-size:16px; margin-right:8px;" onclick="window.abrirModalEdicao('${t.id}')" title="Editar">✏️</button>` : ''}
+                    ${t.contaOrigem !== 'API' ? `<button style="background:none; border:none; cursor:pointer; font-size:16px; margin-right:8px;" onclick="window.abrirModalEdicao('${t.id}')" title="Editar">✏️</button>` : ''}
                     <button style="background:none; border:none; cursor:pointer; font-size:16px;" onclick="window.excluirLancamento('${t.id}')" title="Excluir">🗑️</button>
                 </td>
             </tr>`;
@@ -469,6 +438,11 @@ window.renderizarRegistrosSalvos = () => {
 window.salvarExtratoReal = async () => {
     const rows = document.querySelectorAll('#tabela-pendentes tbody tr');
     let salvas = 0;
+    
+    // Desativa o botão para evitar clique duplo ansioso
+    const btn = document.querySelector('#area-pendentes .btn-action');
+    if(btn) { btn.innerText = "Salvando..."; btn.disabled = true; }
+
     for (let i = 0; i < rows.length; i++) {
         const tId = rows[i].getAttribute('data-id');
         const selectCat = rows[i].querySelector('.select-categoria').value;
@@ -478,6 +452,7 @@ window.salvarExtratoReal = async () => {
             t.categoria = selectCat;
             const novoId = `TRN-${Date.now()}-${Math.floor(Math.random()*1000)}`;
             const trnDB = { id: novoId, data: t.data, descricao: t.descricao, valor: t.valor, tipo: t.tipo, categoria: t.categoria, contaOrigem: t.contaOrigem };
+            
             await setDoc(doc(db, "banco_transacoes", novoId), trnDB);
             window.transacoes.push(trnDB);
             salvas++;
@@ -496,6 +471,27 @@ window.salvarExtratoReal = async () => {
     window.transacoesPendentes = [];
     window.renderizarRegistrosSalvos();
     window.renderizarDashboard();
+};
+
+// ==========================================
+// A FUNÇÃO MÁGICA PARA LIMPAR TESTES
+// ==========================================
+window.apagarTodoOExtrato = async () => {
+    if (!confirm("⚠️ PERIGO IMINENTE:\nTem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO?\nIsso vai remover todas as despesas e receitas inseridas, deixando o cofre vazio para começar de novo.")) return;
+    
+    window.mostrarToast("A Limpar a Base de Dados... Por favor, aguarde.");
+    
+    try {
+        for (let t of window.transacoes) {
+            await deleteDoc(doc(db, "banco_transacoes", t.id));
+        }
+        window.transacoes = [];
+        window.mostrarToast("Sistema completamente limpo e pronto!");
+        window.renderizarRegistrosSalvos();
+        window.renderizarDashboard();
+    } catch (e) {
+        alert("Erro ao tentar limpar o sistema: " + e.message);
+    }
 };
 
 // ==========================================
@@ -571,11 +567,12 @@ window.adicionarLancamentoAvulso = async () => {
     const desc = document.getElementById('avulsoDesc').value.trim();
     const v = parseFloat(document.getElementById('avulsoValor').value) || 0;
     const tipo = document.getElementById('avulsoTipo').value;
+    const cId = document.getElementById('avulsoConta').value; // Nova Função V3.0
     
-    if (!data || !desc || v <= 0) return alert("Preencha todos os campos.");
+    if (!data || !desc || v <= 0 || !cId) return alert("Preencha todos os campos do lançamento.");
     const valor = tipo === 'despesa' ? -Math.abs(v) : Math.abs(v);
     const novoId = `TRN-AVU-${Date.now()}`;
-    const trn = { id: novoId, data: data, descricao: desc, valor: valor, tipo: tipo, categoria: 'avulso', contaOrigem: 'Manual' };
+    const trn = { id: novoId, data: data, descricao: desc, valor: valor, tipo: tipo, categoria: 'avulso', contaOrigem: cId };
     
     await setDoc(doc(db, "banco_transacoes", novoId), trn);
     window.transacoes.push(trn);
@@ -589,7 +586,7 @@ window.adicionarLancamentoAvulso = async () => {
 };
 
 // ==========================================
-// MÓDULO 3: DASHBOARD EXECUTIVO
+// MÓDULO 3: DASHBOARD EXECUTIVO 
 // ==========================================
 window.renderizarDashboard = () => {
     const container = document.getElementById('painel-dashboard-content');
@@ -631,7 +628,7 @@ window.renderizarDashboard = () => {
         <div class="grid-input" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">`;
     
     for(let bId in bancosResumo) {
-        let nBanco = "Lançamentos Manuais";
+        let nBanco = "Lançamentos Manuais / Gerais";
         if(bId !== 'Manual') {
             const bx = window.contas.find(c => c.id === bId);
             if(bx) nBanco = bx.banco;
@@ -727,14 +724,20 @@ window.renderizarDashboard = () => {
 window.renderizarDropdownContas = () => { 
     const selC = document.getElementById('contaImportacao');
     const selF = document.getElementById('filtroConta');
+    const selA = document.getElementById('avulsoConta'); // Nova lista no Avulso
+    
     if(selC) selC.innerHTML = '<option value="">-- OBRIGATÓRIO: Selecione a Conta --</option>';
     if(selF) selF.innerHTML = '<option value="todas">Todas as Contas</option>';
+    if(selA) selA.innerHTML = '';
     
     window.contas.forEach(c => { 
         if(selC) selC.appendChild(new Option(`${c.banco} - ${c.titular}`, c.id)); 
         if(selF) selF.appendChild(new Option(`${c.banco} - ${c.titular}`, c.id)); 
+        if(selA) selA.appendChild(new Option(`${c.banco} - ${c.titular}`, c.id));
     });
+    
     if(selF) selF.appendChild(new Option(`Lançamentos Manuais`, 'Manual')); 
+    if(selA) selA.appendChild(new Option(`Geral / Manual`, 'Manual')); 
 };
 
 window.adicionarConta = async () => { 
