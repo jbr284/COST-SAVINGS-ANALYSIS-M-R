@@ -92,7 +92,7 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
 .hall-wrapper {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: url('LOGO_COST_SAVINGS_ANALYSIS_M&R.PNG') no-repeat center center;
+  background: url('LOGO_COST_SAVINGS_ANALYSIS_M&R.png') no-repeat center center;
   background-size: cover;
   display: flex;
   justify-content: center;
