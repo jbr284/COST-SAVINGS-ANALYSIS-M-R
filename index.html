@@ -278,10 +278,13 @@
 
             <hr style="margin: 40px 0 30px 0; border: 0; border-top: 2px dashed #ccc;">
 
-            <!-- ZONA DE PERIGO PARA RESETAR O BANCO DE DADOS -->
+            <!-- ZONA DE PERIGO ATUALIZADA COM LIMPEZA DE IA -->
             <h3 style="color:#c62828; border-bottom: 2px solid #ffcdd2; padding-bottom: 10px; margin-top:0;">⚠️ Zona de Perigo</h3>
-            <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Fez testes e duplicou lançamentos? Use este botão para limpar todo o seu histórico financeiro e começar de novo. (Suas contas e categorias não serão apagadas).</p>
-            <button class="btn-action" style="background-color: #d32f2f;" onclick="window.apagarTodoOExtrato()">🧹 APAGAR TODOS OS LANÇAMENTOS DO SISTEMA</button>
+            <p style="font-size: 12px; color: #666; margin-bottom: 15px;">Problemas nos testes? Use estes botões para limpar as transações e apagar a memória da inteligência artificial do sistema.</p>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <button class="btn-action" style="background-color: #d32f2f; flex: 1;" onclick="window.apagarTodoOExtrato()">🧹 APAGAR TODOS OS LANÇAMENTOS</button>
+                <button class="btn-action" style="background-color: #e64a19; flex: 1;" onclick="window.apagarRegrasIA()">🧠 LIMPAR MEMÓRIA DA I.A.</button>
+            </div>
 
         </div>
 
@@ -292,6 +295,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
   
-  <script type="module" src="app.js?v=3.0"></script>
+  <script type="module" src="app.js?v=3.3"></script>
 </body>
 </html>
