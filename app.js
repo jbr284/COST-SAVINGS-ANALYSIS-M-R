@@ -37,16 +37,16 @@ const CATEGORIAS_PADRAO = [
 
 window.carregarTodosOsDados = async () => {
   try {
-    const snapContas = await getDocs(collection(db, "banco_contas"));
+    const [snapContas, snapRegras, snapTransacoes, snapCats] = await Promise.all([
+      getDocs(collection(db, "banco_contas")),
+      getDocs(collection(db, "banco_regras")),
+      getDocs(collection(db, "banco_transacoes")),
+      getDocs(collection(db, "banco_categorias"))
+    ]);
+
     window.contas = snapContas.docs.map(d => d.data());
-    
-    const snapRegras = await getDocs(collection(db, "banco_regras"));
     window.regras = snapRegras.docs.map(d => d.data());
-    
-    const snapTransacoes = await getDocs(collection(db, "banco_transacoes"));
     window.transacoes = snapTransacoes.docs.map(d => d.data());
-    
-    const snapCats = await getDocs(collection(db, "banco_categorias"));
     window.categoriasExtras = snapCats.docs.map(d => d.data());
     
     window.renderizarContas();
@@ -67,8 +67,7 @@ function getSelectOptions(catSelected) { return getTodasCategorias().map(c => `<
 
 window.renderizarFiltroCategoria = () => {
   const sel = document.getElementById('filtroCategoria');
-  if(!sel) return;
-  sel.innerHTML = '<option value="todas">Todas as Categorias</option>' + getSelectOptions('');
+  if(sel) sel.innerHTML = '<option value="todas">Todas as Categorias</option>' + getSelectOptions('');
 };
 
 window.adicionarCategoria = async () => {
@@ -158,7 +157,7 @@ window.renderizarCategoriasConfig = () => {
 };
 
 // ==========================================
-// IMPORTAÇÃO E CAÇADOR INTELIGENTE (V3.5)
+// IMPORTAÇÃO E CAÇADOR INTELIGENTE
 // ==========================================
 function limparMoedaCSV(val) {
   let n = val.toString().replace(/[R\$\s\+]/gi, '').trim();
@@ -185,8 +184,7 @@ window.processarArquivo = (event) => {
     else if (ext === 'csv') window.processarCSV(e.target.result, contaId);
     document.getElementById('arquivoExtrato').value = '';
   };
-  const encoding = ext === 'csv' ? 'UTF-8' : 'ISO-8859-1';
-  reader.readAsText(file, encoding);
+  reader.readAsText(file, ext === 'csv' ? 'UTF-8' : 'ISO-8859-1');
 };
 
 window.processarOFX = (ofx, contaId) => {
@@ -234,7 +232,6 @@ window.processarCSV = (csv, contaId) => {
         if (!data && dM) { data = dM[1]; return; }
         
         let numCheck = cl.replace(/\s/g,'').toUpperCase();
-        // V3.5: Filtro de Titânio
         let isMoney = false;
         if (/^[+-]?(R\$|BRL|U\$|\$)?\d{1,3}(\.?\d{3})*,\d{1,2}$/.test(numCheck)) isMoney = true;
         else if (/^[+-]?(R\$|BRL|U\$|\$)?\d{1,3}(,?\d{3})*\.\d{1,2}$/.test(numCheck)) isMoney = true;
@@ -280,11 +277,11 @@ function finalizarImportacao() {
   if (window.transacoesPendentes.length > 0) {
     window.mudarAba('registros');
     window.renderizarRegistrosSalvos();
-  } else alert("O arquivo foi lido, mas nenhuma transação válida foi encontrada (verifique o formato do extrato).");
+  } else alert("Nenhuma transação válida encontrada.");
 }
 
 // ==========================================
-// REGISTROS (A MATEMÁTICA PURA E SANFONA)
+// REGISTROS E FILTROS
 // ==========================================
 window.renderizarRegistrosSalvos = () => {
   const containerSanfona = document.getElementById('area-sanfonas');
@@ -466,10 +463,10 @@ window.salvarExtratoReal = async () => {
 };
 
 // ==========================================
-// ZONA DE PERIGO (RESET E MEMÓRIA IA)
+// ZONA DE PERIGO
 // ==========================================
 window.apagarTodoOExtrato = async () => {
-  if (!confirm("⚠️ PERIGO IMINENTE:\nTem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO?\nIsso não apagará as contas ou categorias, apenas o dinheiro.")) return;
+  if (!confirm("⚠️ PERIGO IMINENTE:\nTem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO?")) return;
   window.mostrarToast("Apagando a Base de Dados... Aguarde.");
   try {
     for (let t of window.transacoes) { await deleteDoc(doc(db, "banco_transacoes", t.id)); }
@@ -481,7 +478,7 @@ window.apagarTodoOExtrato = async () => {
 };
 
 window.apagarRegrasIA = async () => {
-  if (!confirm("⚠️ PERIGO:\nDeseja apagar todas as regras de categorização automática?\nO sistema esquecerá tudo o que aprendeu.")) return;
+  if (!confirm("⚠️ PERIGO:\nDeseja apagar todas as regras de categorização automática?")) return;
   window.mostrarToast("Apagando memória da I.A...");
   try {
     for (let r of window.regras) { await deleteDoc(doc(db, "banco_regras", r.id)); }
@@ -491,7 +488,7 @@ window.apagarRegrasIA = async () => {
 };
 
 // ==========================================
-// SEGURANÇA E EDIÇÃO COM APRENDIZADO DA IA
+// EDIÇÃO E ROTEAMENTO
 // ==========================================
 window.recategorizarInline = async (id, selectEl, oldCat) => {
   const novaCat = selectEl.value;
@@ -506,7 +503,6 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
     
     if (t) {
       t.categoria = novaCat;
-      // IA Reaprende a correção
       if (novaCat !== 'classificar' && novaCat !== 'transferencia_interna' && novaCat !== 'avulso') {
         const chave = t.descricao.trim().toUpperCase();
         const regraExiste = window.regras.find(r => r.palavra_chave === chave);
@@ -522,7 +518,7 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
       }
     }
     
-    window.mostrarToast("Categoria atualizada com sucesso!");
+    window.mostrarToast("Categoria atualizada!");
     window.renderizarRegistrosSalvos();
     window.renderizarDashboard();
   } catch(e) { alert("Erro ao atualizar."); selectEl.value = oldCat; }
@@ -558,7 +554,6 @@ window.salvarEdicao = async () => {
   const tipo = document.getElementById('editTipo').value;
   
   if (!data || !desc || v <= 0) return alert("Preencha todos os campos.");
-  
   const valorReal = tipo === 'despesa' ? -Math.abs(v) : Math.abs(v);
   
   try {
@@ -584,7 +579,6 @@ window.adicionarLancamentoAvulso = async () => {
   
   const valor = tipo === 'despesa' ? -Math.abs(v) : Math.abs(v);
   const novoId = `TRN-AVU-${Date.now()}`;
-  
   const trn = { id: novoId, data: data, descricao: desc, valor: valor, tipo: tipo, categoria: 'avulso', contaOrigem: cId };
   
   await setDoc(doc(db, "banco_transacoes", novoId), trn);
@@ -617,7 +611,6 @@ window.renderizarDashboard = () => {
   
   window.transacoes.forEach(t => {
     if (t.categoria === 'transferencia_interna') return;
-    
     if (!bancosResumo[t.contaOrigem]) bancosResumo[t.contaOrigem] = { r: 0, d: 0 };
     
     if (t.tipo === 'receita' || t.valor > 0) {
@@ -648,7 +641,6 @@ window.renderizarDashboard = () => {
       if(bx) nBanco = bx.banco;
     }
     let bS = bancosResumo[bId].r - bancosResumo[bId].d;
-    
     htmlBancos += `<div style="background: #F8FAFC; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
       <div style="font-weight: 800; color: var(--text-main); font-size: 14px; margin-bottom: 12px;">${nBanco}</div>
       <div style="font-size: 13px; color: var(--success); display: flex; justify-content: space-between;"><span>Entradas:</span> <span>R$ ${bancosResumo[bId].r.toFixed(2)}</span></div>
@@ -677,44 +669,20 @@ window.renderizarDashboard = () => {
     </div>
     ${htmlBancos}
     <div style="margin-top: 30px;">
-      <h4 style="color: var(--tab-bg); margin-top: 0; margin-bottom: 20px; text-align: center;">Divisão de Custos (Despesas)</h4>
+      <h4 style="color: var(--tab-bg); margin-top: 0; margin-bottom: 20px; text-align: center;">Divisão de Custos</h4>
       <div style="position: relative; height: 350px; width: 100%;"><canvas id="graficoCat"></canvas></div>
     </div>
   `;
-  
-  const coresDistintas = ['#e53935', '#1e88e5', '#43a047', '#ffb300', '#8e24aa', '#00acc1', '#d81b60', '#f4511e', '#7cb342', '#3949ab', '#6d4c41', '#546e7a', '#00897b', '#c0ca33', '#5e35b1', '#ff8a65', '#81c784', '#64b5f6', '#ba68c8', '#a1887f'];
   
   setTimeout(() => {
     const ctx = document.getElementById('graficoCat');
     if (ctx) {
       Chart.register(ChartDataLabels);
       if (chartInstance) chartInstance.destroy();
-      
       chartInstance = new Chart(ctx, {
         type: 'doughnut',
-        data: {
-          labels: Object.keys(porCategoria),
-          datasets: [{
-            data: Object.values(porCategoria),
-            backgroundColor: coresDistintas,
-            borderWidth: 2,
-            borderColor: '#ffffff'
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'right' },
-            datalabels: {
-              color: '#fff', font: { weight: 'bold', size: 12 },
-              formatter: (value, ctx) => {
-                let sum = 0;
-                ctx.chart.data.datasets[0].data.map(data => { sum += data; });
-                return (value * 100 / sum).toFixed(1) + "%";
-              }
-            }
-          }
-        }
+        data: { labels: Object.keys(porCategoria), datasets: [{ data: Object.values(porCategoria), backgroundColor: ['#e53935', '#1e88e5', '#43a047', '#ffb300', '#8e24aa', '#00acc1', '#d81b60', '#f4511e', '#7cb342', '#3949ab', '#6d4c41', '#546e7a', '#00897b', '#c0ca33', '#5e35b1', '#ff8a65', '#81c784', '#64b5f6', '#ba68c8', '#a1887f'], borderWidth: 2, borderColor: '#ffffff' }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' }, datalabels: { color: '#fff', font: { weight: 'bold', size: 12 }, formatter: (value, ctx) => { let sum = 0; ctx.chart.data.datasets[0].data.map(data => { sum += data; }); return (value * 100 / sum).toFixed(1) + "%"; } } } }
       });
     }
   }, 100);
@@ -737,7 +705,6 @@ window.renderizarDropdownContas = () => {
     if(selF) selF.appendChild(new Option(`${c.banco} - ${c.titular}`, c.id));
     if(selA) selA.appendChild(new Option(`${c.banco} - ${c.titular}`, c.id));
   });
-  
   if(selF) selF.appendChild(new Option('Lançamentos Manuais / Gerais', 'Manual'));
   if(selA) selA.appendChild(new Option('Geral / Manual', 'Manual'));
 };
@@ -746,38 +713,23 @@ window.adicionarConta = async () => {
   const b = document.getElementById('cadBanco').value.trim();
   const t = document.getElementById('cadTitular').value.trim();
   const f = document.getElementById('cadFonte').value.trim();
-  
   if(!b || !t) return alert("Banco e Titular são obrigatórios.");
   
   const nC = { id: `CTA-${Date.now()}`, banco: b, titular: t, fonte: f };
   await setDoc(doc(db, "banco_contas", nC.id), nC);
-  
   window.contas.push(nC);
-  window.renderizarContas();
-  window.renderizarDropdownContas();
-  window.mostrarToast("Conta Cadastrada!");
-  document.getElementById('cadBanco').value = '';
-  document.getElementById('cadTitular').value = '';
-  document.getElementById('cadFonte').value = '';
+  window.renderizarContas(); window.renderizarDropdownContas(); window.mostrarToast("Conta Cadastrada!");
+  document.getElementById('cadBanco').value = ''; document.getElementById('cadTitular').value = ''; document.getElementById('cadFonte').value = '';
 };
 
 window.renderizarContas = () => {
   const div = document.getElementById('lista-contas-container');
   if(!div) return;
-  if(window.contas.length === 0) {
-    div.innerHTML = `<div style="background: white; padding: 15px; border-radius: 6px; color: #666; text-align:center;">Nenhuma conta cadastrada.</div>`;
-    return;
-  }
-  div.innerHTML = window.contas.map(c => `
-    <div style="background: #F8FAFC; padding: 15px; margin-bottom:10px; border: 1px solid var(--border-color); border-radius: 6px;">
-      <div style="font-weight: 800; color: var(--tab-bg); font-size: 15px;">${c.banco}</div>
-      <div style="font-size: 13px; color: var(--text-main); margin-top: 5px;">Titular: <b>${c.titular}</b> ${c.fonte ? `| Fonte: ${c.fonte}` : ''}</div>
-    </div>
-  `).join('');
+  if(window.contas.length === 0) { div.innerHTML = `<div style="background: white; padding: 15px; border-radius: 6px; color: #666; text-align:center;">Nenhuma conta cadastrada.</div>`; return; }
+  div.innerHTML = window.contas.map(c => `<div style="background: #F8FAFC; padding: 15px; margin-bottom:10px; border: 1px solid var(--border-color); border-radius: 6px;"><div style="font-weight: 800; color: var(--tab-bg); font-size: 15px;">${c.banco}</div><div style="font-size: 13px; color: var(--text-main); margin-top: 5px;">Titular: <b>${c.titular}</b> ${c.fonte ? `| Fonte: ${c.fonte}` : ''}</div></div>`).join('');
 };
 
 window.mudarAba = (aba) => {
-  // Limpa estados ativos
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   
@@ -785,11 +737,10 @@ window.mudarAba = (aba) => {
   const tabs = document.getElementById('app-tabs');
   const content = document.getElementById('app-content');
 
-  // Lógica de visualização: Hall de Entrada vs Sistema
   if (aba === 'home') {
     if(header) header.classList.add('hidden');
     if(tabs) tabs.classList.add('hidden');
-    if(content) content.style.padding = '0'; // Tira margens para a imagem de fundo encostar nas bordas
+    if(content) content.style.padding = '0';
   } else {
     if(header) header.classList.remove('hidden');
     if(tabs) tabs.classList.remove('hidden');
@@ -798,21 +749,35 @@ window.mudarAba = (aba) => {
     if(btn) btn.classList.add('active');
   }
 
-  // Mostra a aba específica
   const painelAtivo = document.getElementById(`painel-${aba}`);
   if(painelAtivo) painelAtivo.classList.add('active');
 
-  // Gatilhos de processamento
   if (aba === 'registros') window.renderizarRegistrosSalvos();
   if (aba === 'dashboard') window.renderizarDashboard();
 };
 
 window.fazerLogin = async () => {
-  const e = document.getElementById('emailLogin').value;
+  const e = document.getElementById('emailLogin').value.trim();
   const s = document.getElementById('senhaLogin').value;
+  
+  if (!e || !s) return alert("⚠️ Por favor, preencha o e-mail e a senha antes de entrar.");
+
+  const btn = document.getElementById('btnAcesso');
+  const txtOriginal = btn.innerText;
+  btn.innerText = "Autenticando...";
+  btn.disabled = true;
+
   try { 
     await signInWithEmailAndPassword(auth, e, s); 
-  } catch (er) { alert("Credenciais inválidas. Tente novamente."); }
+  } catch (er) { 
+    console.error("Erro Auth:", er.code, er.message);
+    if (er.code === 'auth/invalid-email') alert("⚠️ O formato do e-mail é inválido.");
+    else if (er.code === 'auth/user-not-found' || er.code === 'auth/invalid-credential') alert("⚠️ Credenciais incorretas ou usuário não encontrado.");
+    else alert("⚠️ Falha no login. Verifique as credenciais e tente novamente.");
+  } finally {
+    btn.innerText = txtOriginal;
+    btn.disabled = false;
+  }
 };
 
 window.sairApp = async () => { if(confirm("Deseja realmente sair?")) await signOut(auth); };
@@ -821,7 +786,7 @@ window.mostrarToast = (m) => {
   const t = document.getElementById('toast'); 
   t.innerText = m; 
   t.classList.remove('show');
-  void t.offsetWidth; // Trigger reflow para reiniciar animação
+  void t.offsetWidth;
   t.classList.add('show'); 
 };
 
@@ -829,7 +794,7 @@ onAuthStateChanged(auth, (u) => {
   if (u) { 
     document.getElementById('tela-login').classList.add('hidden'); 
     document.getElementById('app').classList.remove('hidden');
-    window.mudarAba('home'); // Agora ao logar, o sistema vai direto para o Hall de Entrada!
+    window.mudarAba('home');
   } else { 
     document.getElementById('tela-login').classList.remove('hidden'); 
     document.getElementById('app').classList.add('hidden');
