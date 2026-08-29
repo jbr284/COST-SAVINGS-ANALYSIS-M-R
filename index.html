@@ -14,9 +14,6 @@
 </head>
 <body>
   
-  <!-- =========================================
-       1. TELA DE LOGIN (ERP ROBUST)
-  ========================================= -->
   <div id="tela-login">
     <div class="login-card">
       <div class="login-header">
@@ -35,12 +32,8 @@
     </div>
   </div>
 
-  <!-- =========================================
-       2. SISTEMA INTERNO E ROTEAMENTO
-  ========================================= -->
   <div id="app" class="hidden">
     
-    <!-- Cabeçalho -->
     <header class="app-header" id="app-header">
       <div>
         <h1>COST SAVINGS ANALYSIS M&R</h1>
@@ -49,7 +42,6 @@
       <button class="btn-header-home" onclick="window.mudarAba('home')">Voltar ao Início</button>
     </header>
 
-    <!-- Abas de Navegação -->
     <nav class="tab-bar" id="app-tabs">
       <button id="btn-tab-importacao" class="tab-btn" onclick="window.mudarAba('importacao')">Importar Extratos</button>
       <button id="btn-tab-registros" class="tab-btn" onclick="window.mudarAba('registros')">Registros e Extratos</button>
@@ -59,9 +51,6 @@
 
     <main class="app-content" id="app-content">
 
-      <!-- =========================================
-           PAINEL ZERO: HALL DE ENTRADA
-      ========================================= -->
       <div id="painel-home" class="panel">
         <div class="hall-wrapper">
           <div class="hall-content">
@@ -77,9 +66,6 @@
         </div>
       </div>
 
-      <!-- =========================================
-           PAINEL 1: IMPORTAÇÃO
-      ========================================= -->
       <div id="painel-importacao" class="panel">
         <div class="card">
           <h3>Importar Extrato Bancário</h3>
@@ -109,12 +95,21 @@
         </div>
       </div>
 
-      <!-- =========================================
-           PAINEL 2: REGISTROS
-      ========================================= -->
       <div id="painel-registros" class="panel">
+        
+        <!-- Cabeçalho Exclusivo para o PDF -->
+        <div class="onlyprint" style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #0F172A; margin: 0;">COST SAVINGS ANALYSIS M&R</h2>
+          <p style="margin: 5px 0; color: #64748B;">Relatório Financeiro de Registros e Extratos</p>
+          <hr style="border: 1px solid #E2E8F0; margin-top: 15px;">
+        </div>
+
         <div class="card noprint">
-          <h3>Filtros de Pesquisa</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+            <h3 style="margin: 0; border: none; padding: 0;">Filtros de Pesquisa</h3>
+            <button class="btn" style="background-color: #334155; width: auto;" onclick="window.print()">🖨️ Exportar PDF</button>
+          </div>
+          
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px;">
             <div class="input-group"><label>Banco/Conta:</label><select id="filtroConta" onchange="window.renderizarRegistrosSalvos()"></select></div>
             <div class="input-group"><label>Categoria:</label><select id="filtroCategoria" onchange="window.renderizarRegistrosSalvos()"></select></div>
@@ -136,9 +131,6 @@
         <div id="area-sanfonas"></div>
       </div>
 
-      <!-- =========================================
-           PAINEL 3: DASHBOARD
-      ========================================= -->
       <div id="painel-dashboard" class="panel">
         <div class="card">
           <h3>Balanço Executivo</h3>
@@ -146,9 +138,6 @@
         </div>
       </div>
 
-      <!-- =========================================
-           PAINEL 4: CONFIGURAÇÕES
-      ========================================= -->
       <div id="painel-configuracoes" class="panel">
         <div class="card">
           <h3>Gestão de Contas Bancárias</h3>
@@ -221,7 +210,7 @@
   <!-- =========================================
        MODAIS DE EDIÇÃO (OVERLAYS)
   ========================================= -->
-  <div id="modal-editar" class="modal-overlay hidden">
+  <div id="modal-editar" class="modal-overlay hidden noprint">
     <div class="modal-box">
       <h3 style="color: var(--tab-bg); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top:0;">Editar Lançamento</h3>
       <input type="hidden" id="editId">
@@ -239,7 +228,7 @@
     </div>
   </div>
 
-  <div id="modal-editar-categoria" class="modal-overlay hidden">
+  <div id="modal-editar-categoria" class="modal-overlay hidden noprint">
     <div class="modal-box">
       <h3 style="color: var(--tab-bg); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top:0;">Editar Categoria</h3>
       <input type="hidden" id="editCatId">
@@ -284,11 +273,9 @@
     </div>
   </div>
 
-  <!-- MODAL DE SEGURANÇA (CONFIRMAÇÃO DE SENHA PARA RESET) -->
-  <div id="modal-confirmacao-senha" class="modal-overlay hidden">
+  <div id="modal-confirmacao-senha" class="modal-overlay hidden noprint">
     <div class="modal-box" style="border-top: 4px solid var(--danger);">
       <h3 style="color: var(--danger); margin-top:0; border-bottom: none;">⚠️ Autenticação Necessária</h3>
-      <!-- O texto abaixo muda dinamicamente via JS dependendo do botão clicado -->
       <p id="modal-seguranca-texto" style="font-size: 13px; color: var(--text-main); margin-bottom: 20px; font-weight: bold;"></p>
       
       <input type="hidden" id="acaoDestrutivaAlvo">
@@ -303,7 +290,7 @@
     </div>
   </div>
 
-  <div id="toast">Operação Realizada!</div>
+  <div id="toast" class="noprint">Operação Realizada!</div>
 
   <script type="module" src="app.js"></script>
 </body>
