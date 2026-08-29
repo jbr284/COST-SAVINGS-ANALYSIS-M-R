@@ -463,18 +463,18 @@ window.salvarExtratoReal = async () => {
 };
 
 // ==========================================
-// ZONA DE PERIGO COM VALIDAÇÃO DE SENHA
+// ZONA DE PERIGO COM VALIDAÇÃO DE SENHA (DIRETO PARA O MODAL)
 // ==========================================
 window.apagarTodoOExtrato = () => {
-  if (!confirm("⚠️ PERIGO IMINENTE:\nTem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO?")) return;
   document.getElementById('acaoDestrutivaAlvo').value = 'extrato';
+  document.getElementById('modal-seguranca-texto').innerText = 'Tem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO? (As contas e categorias serão mantidas).';
   document.getElementById('inputSenhaConfirmacao').value = '';
   document.getElementById('modal-confirmacao-senha').classList.remove('hidden');
 };
 
 window.apagarRegrasIA = () => {
-  if (!confirm("⚠️ PERIGO:\nDeseja apagar todas as regras de categorização automática?")) return;
   document.getElementById('acaoDestrutivaAlvo').value = 'ia';
+  document.getElementById('modal-seguranca-texto').innerText = 'Deseja apagar todas as regras de categorização automática? O sistema esquecerá tudo o que aprendeu.';
   document.getElementById('inputSenhaConfirmacao').value = '';
   document.getElementById('modal-confirmacao-senha').classList.remove('hidden');
 };
@@ -491,7 +491,7 @@ window.executarAcaoDestrutiva = async () => {
 
   try {
     window.mostrarToast("Validando segurança...");
-    // A validação real no servidor do Firebase
+    // A validação real no servidor do Firebase usando o email já logado silenciosamente
     await signInWithEmailAndPassword(auth, auth.currentUser.email, pwd);
     
     document.getElementById('modal-confirmacao-senha').classList.add('hidden');
@@ -538,6 +538,7 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
     
     if (t) {
       t.categoria = novaCat;
+      // IA Reaprende a correção
       if (novaCat !== 'classificar' && novaCat !== 'transferencia_interna' && novaCat !== 'avulso') {
         const chave = t.descricao.trim().toUpperCase();
         const regraExiste = window.regras.find(r => r.palavra_chave === chave);
