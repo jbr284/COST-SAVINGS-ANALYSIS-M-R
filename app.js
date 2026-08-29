@@ -463,10 +463,10 @@ window.salvarExtratoReal = async () => {
 };
 
 // ==========================================
-// ZONA DE PERIGO
+// ZONA DE PERIGO (RESET E MEMÓRIA IA)
 // ==========================================
 window.apagarTodoOExtrato = async () => {
-  if (!confirm("⚠️ PERIGO IMINENTE:\nTem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO?")) return;
+  if (!confirm("⚠️ PERIGO IMINENTE:\nTem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO?\nIsso não apagará as contas ou categorias, apenas o dinheiro.")) return;
   window.mostrarToast("Apagando a Base de Dados... Aguarde.");
   try {
     for (let t of window.transacoes) { await deleteDoc(doc(db, "banco_transacoes", t.id)); }
@@ -478,7 +478,7 @@ window.apagarTodoOExtrato = async () => {
 };
 
 window.apagarRegrasIA = async () => {
-  if (!confirm("⚠️ PERIGO:\nDeseja apagar todas as regras de categorização automática?")) return;
+  if (!confirm("⚠️ PERIGO:\nDeseja apagar todas as regras de categorização automática?\nO sistema esquecerá tudo o que aprendeu.")) return;
   window.mostrarToast("Apagando memória da I.A...");
   try {
     for (let r of window.regras) { await deleteDoc(doc(db, "banco_regras", r.id)); }
@@ -488,7 +488,7 @@ window.apagarRegrasIA = async () => {
 };
 
 // ==========================================
-// EDIÇÃO E ROTEAMENTO
+// SEGURANÇA E EDIÇÃO COM APRENDIZADO DA IA
 // ==========================================
 window.recategorizarInline = async (id, selectEl, oldCat) => {
   const novaCat = selectEl.value;
@@ -503,6 +503,7 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
     
     if (t) {
       t.categoria = novaCat;
+      // IA Reaprende a correção
       if (novaCat !== 'classificar' && novaCat !== 'transferencia_interna' && novaCat !== 'avulso') {
         const chave = t.descricao.trim().toUpperCase();
         const regraExiste = window.regras.find(r => r.palavra_chave === chave);
@@ -518,7 +519,7 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
       }
     }
     
-    window.mostrarToast("Categoria atualizada!");
+    window.mostrarToast("Categoria atualizada com sucesso!");
     window.renderizarRegistrosSalvos();
     window.renderizarDashboard();
   } catch(e) { alert("Erro ao atualizar."); selectEl.value = oldCat; }
@@ -554,6 +555,7 @@ window.salvarEdicao = async () => {
   const tipo = document.getElementById('editTipo').value;
   
   if (!data || !desc || v <= 0) return alert("Preencha todos os campos.");
+  
   const valorReal = tipo === 'despesa' ? -Math.abs(v) : Math.abs(v);
   
   try {
@@ -579,6 +581,7 @@ window.adicionarLancamentoAvulso = async () => {
   
   const valor = tipo === 'despesa' ? -Math.abs(v) : Math.abs(v);
   const novoId = `TRN-AVU-${Date.now()}`;
+  
   const trn = { id: novoId, data: data, descricao: desc, valor: valor, tipo: tipo, categoria: 'avulso', contaOrigem: cId };
   
   await setDoc(doc(db, "banco_transacoes", novoId), trn);
@@ -611,6 +614,7 @@ window.renderizarDashboard = () => {
   
   window.transacoes.forEach(t => {
     if (t.categoria === 'transferencia_interna') return;
+    
     if (!bancosResumo[t.contaOrigem]) bancosResumo[t.contaOrigem] = { r: 0, d: 0 };
     
     if (t.tipo === 'receita' || t.valor > 0) {
@@ -641,6 +645,7 @@ window.renderizarDashboard = () => {
       if(bx) nBanco = bx.banco;
     }
     let bS = bancosResumo[bId].r - bancosResumo[bId].d;
+    
     htmlBancos += `<div style="background: #F8FAFC; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
       <div style="font-weight: 800; color: var(--text-main); font-size: 14px; margin-bottom: 12px;">${nBanco}</div>
       <div style="font-size: 13px; color: var(--success); display: flex; justify-content: space-between;"><span>Entradas:</span> <span>R$ ${bancosResumo[bId].r.toFixed(2)}</span></div>
@@ -669,20 +674,44 @@ window.renderizarDashboard = () => {
     </div>
     ${htmlBancos}
     <div style="margin-top: 30px;">
-      <h4 style="color: var(--tab-bg); margin-top: 0; margin-bottom: 20px; text-align: center;">Divisão de Custos</h4>
+      <h4 style="color: var(--tab-bg); margin-top: 0; margin-bottom: 20px; text-align: center;">Divisão de Custos (Despesas)</h4>
       <div style="position: relative; height: 350px; width: 100%;"><canvas id="graficoCat"></canvas></div>
     </div>
   `;
+  
+  const coresDistintas = ['#e53935', '#1e88e5', '#43a047', '#ffb300', '#8e24aa', '#00acc1', '#d81b60', '#f4511e', '#7cb342', '#3949ab', '#6d4c41', '#546e7a', '#00897b', '#c0ca33', '#5e35b1', '#ff8a65', '#81c784', '#64b5f6', '#ba68c8', '#a1887f'];
   
   setTimeout(() => {
     const ctx = document.getElementById('graficoCat');
     if (ctx) {
       Chart.register(ChartDataLabels);
       if (chartInstance) chartInstance.destroy();
+      
       chartInstance = new Chart(ctx, {
         type: 'doughnut',
-        data: { labels: Object.keys(porCategoria), datasets: [{ data: Object.values(porCategoria), backgroundColor: ['#e53935', '#1e88e5', '#43a047', '#ffb300', '#8e24aa', '#00acc1', '#d81b60', '#f4511e', '#7cb342', '#3949ab', '#6d4c41', '#546e7a', '#00897b', '#c0ca33', '#5e35b1', '#ff8a65', '#81c784', '#64b5f6', '#ba68c8', '#a1887f'], borderWidth: 2, borderColor: '#ffffff' }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' }, datalabels: { color: '#fff', font: { weight: 'bold', size: 12 }, formatter: (value, ctx) => { let sum = 0; ctx.chart.data.datasets[0].data.map(data => { sum += data; }); return (value * 100 / sum).toFixed(1) + "%"; } } } }
+        data: {
+          labels: Object.keys(porCategoria),
+          datasets: [{
+            data: Object.values(porCategoria),
+            backgroundColor: coresDistintas,
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right' },
+            datalabels: {
+              color: '#fff', font: { weight: 'bold', size: 12 },
+              formatter: (value, ctx) => {
+                let sum = 0;
+                ctx.chart.data.datasets[0].data.map(data => { sum += data; });
+                return (value * 100 / sum).toFixed(1) + "%";
+              }
+            }
+          }
+        }
       });
     }
   }, 100);
@@ -705,6 +734,7 @@ window.renderizarDropdownContas = () => {
     if(selF) selF.appendChild(new Option(`${c.banco} - ${c.titular}`, c.id));
     if(selA) selA.appendChild(new Option(`${c.banco} - ${c.titular}`, c.id));
   });
+  
   if(selF) selF.appendChild(new Option('Lançamentos Manuais / Gerais', 'Manual'));
   if(selA) selA.appendChild(new Option('Geral / Manual', 'Manual'));
 };
@@ -713,20 +743,34 @@ window.adicionarConta = async () => {
   const b = document.getElementById('cadBanco').value.trim();
   const t = document.getElementById('cadTitular').value.trim();
   const f = document.getElementById('cadFonte').value.trim();
+  
   if(!b || !t) return alert("Banco e Titular são obrigatórios.");
   
   const nC = { id: `CTA-${Date.now()}`, banco: b, titular: t, fonte: f };
   await setDoc(doc(db, "banco_contas", nC.id), nC);
+  
   window.contas.push(nC);
-  window.renderizarContas(); window.renderizarDropdownContas(); window.mostrarToast("Conta Cadastrada!");
-  document.getElementById('cadBanco').value = ''; document.getElementById('cadTitular').value = ''; document.getElementById('cadFonte').value = '';
+  window.renderizarContas();
+  window.renderizarDropdownContas();
+  window.mostrarToast("Conta Cadastrada!");
+  document.getElementById('cadBanco').value = '';
+  document.getElementById('cadTitular').value = '';
+  document.getElementById('cadFonte').value = '';
 };
 
 window.renderizarContas = () => {
   const div = document.getElementById('lista-contas-container');
   if(!div) return;
-  if(window.contas.length === 0) { div.innerHTML = `<div style="background: white; padding: 15px; border-radius: 6px; color: #666; text-align:center;">Nenhuma conta cadastrada.</div>`; return; }
-  div.innerHTML = window.contas.map(c => `<div style="background: #F8FAFC; padding: 15px; margin-bottom:10px; border: 1px solid var(--border-color); border-radius: 6px;"><div style="font-weight: 800; color: var(--tab-bg); font-size: 15px;">${c.banco}</div><div style="font-size: 13px; color: var(--text-main); margin-top: 5px;">Titular: <b>${c.titular}</b> ${c.fonte ? `| Fonte: ${c.fonte}` : ''}</div></div>`).join('');
+  if(window.contas.length === 0) {
+    div.innerHTML = `<div style="background: white; padding: 15px; border-radius: 6px; color: #666; text-align:center;">Nenhuma conta cadastrada.</div>`;
+    return;
+  }
+  div.innerHTML = window.contas.map(c => `
+    <div style="background: #F8FAFC; padding: 15px; margin-bottom:10px; border: 1px solid var(--border-color); border-radius: 6px;">
+      <div style="font-weight: 800; color: var(--tab-bg); font-size: 15px;">${c.banco}</div>
+      <div style="font-size: 13px; color: var(--text-main); margin-top: 5px;">Titular: <b>${c.titular}</b> ${c.fonte ? `| Fonte: ${c.fonte}` : ''}</div>
+    </div>
+  `).join('');
 };
 
 window.mudarAba = (aba) => {
@@ -794,6 +838,10 @@ onAuthStateChanged(auth, (u) => {
   if (u) { 
     document.getElementById('tela-login').classList.add('hidden'); 
     document.getElementById('app').classList.remove('hidden');
+    
+    // GATILHO CORRIGIDO: Carrega o BD ao entrar
+    window.carregarTodosOsDados(); 
+    
     window.mudarAba('home');
   } else { 
     document.getElementById('tela-login').classList.remove('hidden'); 
