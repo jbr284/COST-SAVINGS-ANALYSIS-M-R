@@ -288,7 +288,7 @@ window.renderizarRegistrosSalvos = () => {
   const containerPend = document.getElementById('area-pendentes');
   
   if (window.transacoesPendentes.length > 0) {
-    let htmlP = `<div style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; margin-bottom:20px;">
+    let htmlP = `<div class="noprint" style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; margin-bottom:20px;">
       <h4 style="color: #d84315; margin-top:0;">${window.transacoesPendentes.length} Lançamentos Pendentes</h4>
       <div style="max-height: 300px; overflow-y: auto; background: white; border: 1px solid #ffcc80;">
       <table style="width: 100%; border-collapse: collapse; font-size: 13px;" id="tabela-pendentes">
@@ -343,7 +343,7 @@ window.renderizarRegistrosSalvos = () => {
 
   const chavesComDados = Object.keys(gruposInfo).filter(k => gruposInfo[k].trnsFiltradas.length > 0);
   if (chavesComDados.length === 0) {
-    containerSanfona.innerHTML = `<div class="card" style="text-align:center; color:#666; font-size: 15px;">Nenhum registro encontrado para este filtro.</div>`;
+    containerSanfona.innerHTML = `<div class="card noprint" style="text-align:center; color:#666; font-size: 15px;">Nenhum registro encontrado para este filtro.</div>`;
     return;
   }
 
@@ -403,6 +403,7 @@ window.renderizarRegistrosSalvos = () => {
           <select class="noprint" onchange="window.recategorizarInline('${t.id}', this, '${t.categoria}')" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
             ${getSelectOptions(t.categoria)}
           </select>
+          <span class="onlyprint">${getCatLabel(t.categoria)}</span>
         </td>
         <td class="noprint" style="padding: 12px 5px; text-align: center; width: 15%;">
           ${t.contaOrigem === 'Manual' ? `<button class="btn-icon" style="color:var(--tab-bg);" onclick="window.abrirModalEdicao('${t.id}')">✏️</button>` : ''}
@@ -463,7 +464,7 @@ window.salvarExtratoReal = async () => {
 };
 
 // ==========================================
-// ZONA DE PERIGO COM VALIDAÇÃO DE SENHA (DIRETO PARA O MODAL)
+// ZONA DE PERIGO COM VALIDAÇÃO DE SENHA
 // ==========================================
 window.apagarTodoOExtrato = () => {
   document.getElementById('acaoDestrutivaAlvo').value = 'extrato';
@@ -491,7 +492,6 @@ window.executarAcaoDestrutiva = async () => {
 
   try {
     window.mostrarToast("Validando segurança...");
-    // A validação real no servidor do Firebase usando o email já logado silenciosamente
     await signInWithEmailAndPassword(auth, auth.currentUser.email, pwd);
     
     document.getElementById('modal-confirmacao-senha').classList.add('hidden');
