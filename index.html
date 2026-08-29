@@ -5,19 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cost Savings Analysis M&R</title>
   
-  <!-- Previne o erro 404 do Favicon -->
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
-  
   <link rel="stylesheet" href="style.css">
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 </head>
 <body>
   
-  <!-- =========================================
-       1. TELA DE LOGIN (ERP ROBUST)
-  ========================================= -->
   <div id="tela-login">
     <div class="login-card">
       <div class="login-header">
@@ -36,12 +32,8 @@
     </div>
   </div>
 
-  <!-- =========================================
-       2. SISTEMA INTERNO E ROTEAMENTO
-  ========================================= -->
   <div id="app" class="hidden">
     
-    <!-- Cabeçalho (Oculto no Hall de Entrada) -->
     <header class="app-header" id="app-header">
       <div>
         <h1>COST SAVINGS ANALYSIS M&R</h1>
@@ -50,7 +42,6 @@
       <button class="btn-header-home" onclick="window.mudarAba('home')">Voltar ao Início</button>
     </header>
 
-    <!-- Abas de Navegação (Ocultas no Hall de Entrada) -->
     <nav class="tab-bar" id="app-tabs">
       <button id="btn-tab-importacao" class="tab-btn" onclick="window.mudarAba('importacao')">Importar Extratos</button>
       <button id="btn-tab-registros" class="tab-btn" onclick="window.mudarAba('registros')">Registros e Extratos</button>
@@ -60,13 +51,10 @@
 
     <main class="app-content" id="app-content">
 
-      <!-- =========================================
-           PAINEL ZERO: HALL DE ENTRADA
-      ========================================= -->
       <div id="painel-home" class="panel">
         <div class="hall-wrapper">
           <div class="hall-content">
-            <h2 class="hall-title">JB Finance Analytics</h2>
+            <h2 class="hall-title">COST SAVINGS ANALYSIS M&R</h2>
             
             <button class="btn-hall btn-hall-blue" onclick="window.mudarAba('importacao')">IMPORTAR EXTRATOS</button>
             <button class="btn-hall btn-hall-green" onclick="window.mudarAba('registros')">REGISTROS E EXTRATOS</button>
@@ -78,9 +66,6 @@
         </div>
       </div>
 
-      <!-- =========================================
-           PAINEL 1: IMPORTAÇÃO
-      ========================================= -->
       <div id="painel-importacao" class="panel">
         <div class="card">
           <h3>Importar Extrato Bancário</h3>
@@ -110,9 +95,6 @@
         </div>
       </div>
 
-      <!-- =========================================
-           PAINEL 2: REGISTROS
-      ========================================= -->
       <div id="painel-registros" class="panel">
         <div class="card noprint">
           <h3>Filtros de Pesquisa</h3>
@@ -137,9 +119,6 @@
         <div id="area-sanfonas"></div>
       </div>
 
-      <!-- =========================================
-           PAINEL 3: DASHBOARD
-      ========================================= -->
       <div id="painel-dashboard" class="panel">
         <div class="card">
           <h3>Balanço Executivo</h3>
@@ -147,9 +126,6 @@
         </div>
       </div>
 
-      <!-- =========================================
-           PAINEL 4: CONFIGURAÇÕES
-      ========================================= -->
       <div id="painel-configuracoes" class="panel">
         <div class="card">
           <h3>Gestão de Contas Bancárias</h3>
@@ -197,9 +173,6 @@
     </main>
   </div>
 
-  <!-- =========================================
-       MODAIS DE EDIÇÃO (OVERLAYS)
-  ========================================= -->
   <div id="modal-editar" class="modal-overlay hidden">
     <div class="modal-box">
       <h3 style="color: var(--tab-bg); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top:0;">Editar Lançamento</h3>
