@@ -464,27 +464,64 @@ window.salvarExtratoReal = async () => {
 
 // ==========================================
 // ZONA DE PERIGO (RESET E MEMÓRIA IA)
+// COM VALIDAÇÃO DE SENHA (REAUTENTICAÇÃO)
 // ==========================================
-window.apagarTodoOExtrato = async () => {
+window.apagarTodoOExtrato = () => {
   if (!confirm("⚠️ PERIGO IMINENTE:\nTem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO?\nIsso não apagará as contas ou categorias, apenas o dinheiro.")) return;
-  window.mostrarToast("Apagando a Base de Dados... Aguarde.");
-  try {
-    for (let t of window.transacoes) { await deleteDoc(doc(db, "banco_transacoes", t.id)); }
-    window.transacoes = [];
-    window.mostrarToast("Sistema financeiro limpo e zerado!");
-    window.renderizarRegistrosSalvos();
-    window.renderizarDashboard();
-  } catch (e) { alert("Erro ao limpar sistema: " + e.message); }
+  document.getElementById('acaoDestrutivaAlvo').value = 'extrato';
+  document.getElementById('inputSenhaConfirmacao').value = '';
+  document.getElementById('modal-confirmacao-senha').classList.remove('hidden');
 };
 
-window.apagarRegrasIA = async () => {
+window.apagarRegrasIA = () => {
   if (!confirm("⚠️ PERIGO:\nDeseja apagar todas as regras de categorização automática?\nO sistema esquecerá tudo o que aprendeu.")) return;
-  window.mostrarToast("Apagando memória da I.A...");
+  document.getElementById('acaoDestrutivaAlvo').value = 'ia';
+  document.getElementById('inputSenhaConfirmacao').value = '';
+  document.getElementById('modal-confirmacao-senha').classList.remove('hidden');
+};
+
+window.executarAcaoDestrutiva = async () => {
+  const pwd = document.getElementById('inputSenhaConfirmacao').value;
+  const acao = document.getElementById('acaoDestrutivaAlvo').value;
+  
+  if (!pwd) return alert("⚠️ Digite a sua senha de acesso para confirmar a operação.");
+
+  const btnConf = document.getElementById('btnConfirmarReset');
+  btnConf.innerText = "Aguarde...";
+  btnConf.disabled = true;
+
   try {
-    for (let r of window.regras) { await deleteDoc(doc(db, "banco_regras", r.id)); }
-    window.regras = [];
-    window.mostrarToast("Memória da Inteligência Artificial limpa com sucesso!");
-  } catch (e) { alert("Erro ao limpar memória: " + e.message); }
+    window.mostrarToast("Validando segurança...");
+    // Firebase: Força um login para verificar se a senha que ele digitou está correta
+    await signInWithEmailAndPassword(auth, auth.currentUser.email, pwd);
+    
+    // Se o código chegou aqui, a senha está correta. Pode fechar o modal.
+    document.getElementById('modal-confirmacao-senha').classList.add('hidden');
+    
+    if (acao === 'extrato') {
+      window.mostrarToast("Apagando a Base de Dados... Aguarde.");
+      for (let t of window.transacoes) { await deleteDoc(doc(db, "banco_transacoes", t.id)); }
+      window.transacoes = [];
+      window.mostrarToast("Sistema financeiro limpo e zerado!");
+      window.renderizarRegistrosSalvos();
+      window.renderizarDashboard();
+      
+    } else if (acao === 'ia') {
+      window.mostrarToast("Apagando memória da I.A...");
+      for (let r of window.regras) { await deleteDoc(doc(db, "banco_regras", r.id)); }
+      window.regras = [];
+      window.mostrarToast("Memória da Inteligência Artificial limpa com sucesso!");
+    }
+  } catch (e) {
+    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+      alert("❌ Senha incorreta. Operação de segurança bloqueada.");
+    } else {
+      alert("Erro ao executar ação: " + e.message);
+    }
+  } finally {
+    btnConf.innerText = "Confirmar e Apagar";
+    btnConf.disabled = false;
+  }
 };
 
 // ==========================================
@@ -838,10 +875,7 @@ onAuthStateChanged(auth, (u) => {
   if (u) { 
     document.getElementById('tela-login').classList.add('hidden'); 
     document.getElementById('app').classList.remove('hidden');
-    
-    // GATILHO CORRIGIDO: Carrega o BD ao entrar
     window.carregarTodosOsDados(); 
-    
     window.mudarAba('home');
   } else { 
     document.getElementById('tela-login').classList.remove('hidden'); 
