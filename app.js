@@ -463,18 +463,17 @@ window.salvarExtratoReal = async () => {
 };
 
 // ==========================================
-// ZONA DE PERIGO (RESET E MEMÓRIA IA)
-// COM VALIDAÇÃO DE SENHA (REAUTENTICAÇÃO)
+// ZONA DE PERIGO COM VALIDAÇÃO DE SENHA
 // ==========================================
 window.apagarTodoOExtrato = () => {
-  if (!confirm("⚠️ PERIGO IMINENTE:\nTem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO?\nIsso não apagará as contas ou categorias, apenas o dinheiro.")) return;
+  if (!confirm("⚠️ PERIGO IMINENTE:\nTem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO?")) return;
   document.getElementById('acaoDestrutivaAlvo').value = 'extrato';
   document.getElementById('inputSenhaConfirmacao').value = '';
   document.getElementById('modal-confirmacao-senha').classList.remove('hidden');
 };
 
 window.apagarRegrasIA = () => {
-  if (!confirm("⚠️ PERIGO:\nDeseja apagar todas as regras de categorização automática?\nO sistema esquecerá tudo o que aprendeu.")) return;
+  if (!confirm("⚠️ PERIGO:\nDeseja apagar todas as regras de categorização automática?")) return;
   document.getElementById('acaoDestrutivaAlvo').value = 'ia';
   document.getElementById('inputSenhaConfirmacao').value = '';
   document.getElementById('modal-confirmacao-senha').classList.remove('hidden');
@@ -492,10 +491,9 @@ window.executarAcaoDestrutiva = async () => {
 
   try {
     window.mostrarToast("Validando segurança...");
-    // Firebase: Força um login para verificar se a senha que ele digitou está correta
+    // A validação real no servidor do Firebase
     await signInWithEmailAndPassword(auth, auth.currentUser.email, pwd);
     
-    // Se o código chegou aqui, a senha está correta. Pode fechar o modal.
     document.getElementById('modal-confirmacao-senha').classList.add('hidden');
     
     if (acao === 'extrato') {
@@ -540,7 +538,6 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
     
     if (t) {
       t.categoria = novaCat;
-      // IA Reaprende a correção
       if (novaCat !== 'classificar' && novaCat !== 'transferencia_interna' && novaCat !== 'avulso') {
         const chave = t.descricao.trim().toUpperCase();
         const regraExiste = window.regras.find(r => r.palavra_chave === chave);
