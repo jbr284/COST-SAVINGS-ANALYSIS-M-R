@@ -205,7 +205,7 @@
           <div id="lista-categorias-container"></div>
         </div>
 
-        <div class="card" style="border: 1px solid var(--danger); background-color: var(--danger-bg);">
+        <div class="card" style="border: 1px solid var(--danger); background-color: #FEF2F2;">
           <h3 style="color: var(--danger);">Zona de Perigo (Reset e Memória da IA)</h3>
           <p style="font-size: 13px; color: var(--text-main); margin-bottom: 20px;">Use estes botões com cautela para apagar transações de teste ou resetar o aprendizado automático do robô.</p>
           <div style="display: flex; gap: 15px; flex-wrap: wrap;">
@@ -280,6 +280,24 @@
       <div style="display: flex; gap:10px; margin-top: 20px;">
         <button class="btn" style="background-color: #94A3B8; flex: 1;" onclick="document.getElementById('modal-editar-categoria').classList.add('hidden')">Cancelar</button>
         <button class="btn" style="flex: 1;" onclick="window.salvarEdicaoCategoria()">Salvar Categoria</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE SEGURANÇA (CONFIRMAÇÃO DE SENHA PARA RESET) -->
+  <div id="modal-confirmacao-senha" class="modal-overlay hidden">
+    <div class="modal-box" style="border-top: 4px solid var(--danger);">
+      <h3 style="color: var(--danger); margin-top:0; border-bottom: none;">⚠️ Autenticação Necessária</h3>
+      <p style="font-size: 13px; color: var(--text-main); margin-bottom: 20px;">Esta é uma ação destrutiva irreversível. Por favor, confirme sua senha de login para continuar.</p>
+      
+      <input type="hidden" id="acaoDestrutivaAlvo">
+      <div class="input-group">
+        <label>Senha de Acesso:</label>
+        <input type="password" id="inputSenhaConfirmacao" placeholder="Digite sua senha">
+      </div>
+      <div style="display: flex; gap:10px; margin-top: 25px;">
+        <button class="btn" style="background-color: #94A3B8; flex: 1;" onclick="document.getElementById('modal-confirmacao-senha').classList.add('hidden')">Cancelar</button>
+        <button class="btn" style="background-color: var(--danger); flex: 1;" id="btnConfirmarReset" onclick="window.executarAcaoDestrutiva()">Confirmar e Apagar</button>
       </div>
     </div>
   </div>
