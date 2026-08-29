@@ -288,12 +288,13 @@
   <div id="modal-confirmacao-senha" class="modal-overlay hidden">
     <div class="modal-box" style="border-top: 4px solid var(--danger);">
       <h3 style="color: var(--danger); margin-top:0; border-bottom: none;">⚠️ Autenticação Necessária</h3>
-      <p style="font-size: 13px; color: var(--text-main); margin-bottom: 20px;">Esta é uma ação destrutiva irreversível. Por favor, confirme sua senha de login para continuar.</p>
+      <!-- O texto abaixo muda dinamicamente via JS dependendo do botão clicado -->
+      <p id="modal-seguranca-texto" style="font-size: 13px; color: var(--text-main); margin-bottom: 20px; font-weight: bold;"></p>
       
       <input type="hidden" id="acaoDestrutivaAlvo">
       <div class="input-group">
-        <label>Senha de Acesso:</label>
-        <input type="password" id="inputSenhaConfirmacao" placeholder="Digite sua senha">
+        <label>Digite sua Senha para Confirmar:</label>
+        <input type="password" id="inputSenhaConfirmacao" placeholder="Sua senha de acesso">
       </div>
       <div style="display: flex; gap:10px; margin-top: 25px;">
         <button class="btn" style="background-color: #94A3B8; flex: 1;" onclick="document.getElementById('modal-confirmacao-senha').classList.add('hidden')">Cancelar</button>
