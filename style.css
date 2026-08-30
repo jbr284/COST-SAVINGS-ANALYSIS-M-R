@@ -1,6 +1,3 @@
-/* =========================================================================
-   VARIÁVEIS DE SISTEMA (PADRÃO ERP)
-========================================================================= */
 :root {
   --bg-app: #F1F5F9;
   --bg-login: #0F172A;
@@ -20,17 +17,11 @@
   --radius: 8px;
 }
 
-/* =========================================================================
-   RESETS GERAIS
-========================================================================= */
 * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
 body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(--text-main); height: 100vh; }
 .hidden { display: none !important; }
-.onlyprint { display: none; } /* Oculto na tela, visível apenas no PDF */
+.onlyprint { display: none; } 
 
-/* =========================================================================
-   1. TELA DE LOGIN (ROBUSTEZ ERP)
-========================================================================= */
 #tela-login {
   display: flex;
   justify-content: center;
@@ -87,9 +78,6 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
 .btn-login:hover:not(:disabled) { background-color: var(--btn-primary-hover); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(46, 125, 50, 0.4); }
 .btn-login:active:not(:disabled) { transform: translateY(1px); box-shadow: var(--shadow-sm); }
 
-/* =========================================================================
-   2. HALL DE ENTRADA (DASHBOARD HUB)
-========================================================================= */
 .hall-wrapper {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -148,9 +136,6 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
 .btn-hall-red    { background-color: transparent; border: 2px solid #EF4444; color: #EF4444; box-shadow: none; }
 .btn-hall-red:hover { background-color: #EF4444; color: white; }
 
-/* =========================================================================
-   3. ESTRUTURA DO SISTEMA INTERNO
-========================================================================= */
 #app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 .app-header {
   background-color: var(--header-bg);
@@ -190,7 +175,6 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Elementos Padrão Internos */
 .card {
   background-color: var(--card-bg); border-radius: var(--radius); padding: 25px;
   margin-bottom: 25px; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);
@@ -200,16 +184,15 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
 .btn { background-color: var(--btn-primary); color: #fff; border: none; padding: 12px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; }
 .btn:hover { background-color: var(--btn-primary-hover); }
 
-/* Accordion de Registros */
-.accordion { background-color: var(--tab-hover); color: white; cursor: pointer; padding: 15px; width: 100%; border: none; text-align: left; outline: none; font-size: 15px; transition: 0.3s; border-radius: 6px; margin-top: 10px; font-weight: bold; }
-.accordion.active, .accordion:hover { background-color: var(--tab-bg); }
-.accordion-panel { padding: 0 15px; background-color: white; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 6px 6px; }
+.table-registros { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; background: white; border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
+.table-registros thead { background-color: #F8FAFC; border-bottom: 2px solid #CBD5E1; }
+.table-registros th { padding: 15px 12px; text-align: left; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 12px; }
+.table-registros td { padding: 12px; border-bottom: 1px solid #E2E8F0; color: #334155; }
+.table-registros tbody tr:hover { background-color: #F1F5F9; }
 
-/* Upload Box */
 .upload-box { border: 2px dashed #90caf9; background: #F8FAFC; padding: 40px; text-align: center; border-radius: 8px; cursor: pointer; margin-bottom: 20px; transition: 0.2s; }
 .upload-box:hover { background: #E2E8F0; border-color: var(--tab-hover); }
 
-/* Modais de Edição */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; justify-content: center; align-items: center; }
 .modal-box { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: var(--shadow-lg); }
 
@@ -218,9 +201,6 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
 @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
 @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
 
-/* =========================================================================
-   4. REGRAS DE IMPRESSÃO / EXPORTAÇÃO PDF
-========================================================================= */
 @media print {
   .noprint { display: none !important; }
   .onlyprint { display: block !important; }
@@ -233,25 +213,8 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
   }
   
   #app-header, #app-tabs { display: none !important; }
-  
   .card { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
   
-  /* Força a sanfona a ficar aberta e invisível como botão */
-  .accordion { 
-    background: transparent !important; 
-    color: var(--bg-login) !important; 
-    padding: 10px 0 !important; 
-    border-bottom: 2px solid #ccc !important; 
-    page-break-after: avoid; 
-  }
-  .accordion-panel { 
-    max-height: none !important; 
-    border: none !important; 
-    page-break-inside: auto; 
-    overflow: visible !important;
-    display: block !important;
-  }
-  
-  table { width: 100% !important; border-collapse: collapse !important; }
-  th, td { border-bottom: 1px solid #ddd !important; padding: 8px !important; color: black !important; }
+  .table-registros { border: none !important; box-shadow: none !important; }
+  .table-registros th, .table-registros td { border-bottom: 1px solid #ddd !important; padding: 8px !important; color: black !important; }
 }
