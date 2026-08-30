@@ -32,7 +32,7 @@ body.privacy-mode .ocultar-valor {
 }
 .ocultar-valor { transition: all 0.3s ease; }
 
-/* CHAVE DE OURO: OLHO CORTADO EM CSS PURO */
+/* OLHO CORTADO EM CSS PURO */
 #btn-privacy {
   position: relative;
   display: flex;
@@ -86,16 +86,46 @@ body.privacy-mode #btn-privacy::after {
 .btn-hall-red:hover { background-color: #EF4444; color: white; }
 
 #app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-.app-header { background-color: var(--header-bg); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: var(--shadow-md); z-index: 10; }
+.app-header { background-color: var(--header-bg); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
 .app-header h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
 .app-header p { margin: 2px 0 0 0; font-size: 12px; color: #94A3B8; }
 .btn-header-home { background-color: #334155; border: none; color: white; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; }
 .btn-header-home:hover { background-color: #475569; }
 
-.tab-bar { background-color: var(--tab-bg); display: flex; padding: 0 20px; overflow-x: auto; }
-.tab-btn { background: none; border: none; color: #93C5FD; padding: 15px 25px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; border-bottom: 3px solid transparent; }
-.tab-btn:hover { color: white; background-color: rgba(255, 255, 255, 0.05); }
-.tab-btn.active { color: white; border-bottom: 3px solid white; background-color: rgba(255, 255, 255, 0.1); }
+/* NOVO MENU DE NAVEGAÇÃO ESPELHADO COM O HUB */
+.tab-bar { 
+  background-color: var(--header-bg); 
+  display: flex; 
+  padding: 10px 30px 20px 30px; 
+  gap: 12px; 
+  overflow-x: auto; 
+  border-top: 1px solid rgba(255,255,255,0.05);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+}
+
+.tab-btn { 
+  color: rgba(255,255,255,0.6); 
+  padding: 12px 22px; 
+  font-size: 13px; 
+  font-weight: 800; 
+  text-transform: uppercase;
+  border-radius: 6px; 
+  cursor: pointer; 
+  transition: all 0.2s ease; 
+  white-space: nowrap; /* Impede o esmagamento do texto */
+}
+
+/* Cores Inativas (Modo Fundo Escurecido) */
+#btn-tab-importacao { background-color: rgba(30, 58, 138, 0.3); border: 1px solid rgba(30, 58, 138, 0.7); }
+#btn-tab-registros { background-color: rgba(46, 125, 50, 0.3); border: 1px solid rgba(46, 125, 50, 0.7); }
+#btn-tab-dashboard { background-color: rgba(217, 119, 6, 0.3); border: 1px solid rgba(217, 119, 6, 0.7); }
+#btn-tab-configuracoes { background-color: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.7); }
+
+/* Cores Ativas e Hover (As mesmas do HUB) */
+#btn-tab-importacao.active, #btn-tab-importacao:hover { background-color: #1E3A8A; color: #fff; border-color: #1E3A8A; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+#btn-tab-registros.active, #btn-tab-registros:hover { background-color: #2E7D32; color: #fff; border-color: #2E7D32; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+#btn-tab-dashboard.active, #btn-tab-dashboard:hover { background-color: #D97706; color: #fff; border-color: #D97706; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+#btn-tab-configuracoes.active, #btn-tab-configuracoes:hover { background-color: #334155; color: #fff; border-color: #334155; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
 
 .app-content { padding: 30px; flex-grow: 1; overflow-y: auto; }
 .panel { display: none; max-width: 1200px; margin: 0 auto; animation: fadeIn 0.3s ease; }
