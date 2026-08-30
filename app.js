@@ -58,9 +58,6 @@ window.carregarTodosOsDados = async () => {
   } catch (e) { console.error("Erro DB: ", e); }
 };
 
-// ==========================================
-// MÓDULO DE CATEGORIAS
-// ==========================================
 function getTodasCategorias() { return [...CATEGORIAS_PADRAO, ...window.categoriasExtras]; }
 function getCatLabel(val) { const found = getTodasCategorias().find(c => c.v === val); return found ? found.l : val; }
 function getSelectOptions(catSelected) { return getTodasCategorias().map(c => `<option value="${c.v}" ${catSelected === c.v ? 'selected' : ''}>${c.l}</option>`).join(''); }
@@ -156,9 +153,6 @@ window.renderizarCategoriasConfig = () => {
   `).join('');
 };
 
-// ==========================================
-// IMPORTAÇÃO E CAÇADOR INTELIGENTE (I.A. BIDIMENSIONAL)
-// ==========================================
 function limparMoedaCSV(val) {
   let n = val.toString().replace(/[R\$\s\+]/gi, '').trim();
   if (n.includes('.') && n.includes(',')) n = n.replace(/\./g,'').replace(',', '.');
@@ -248,7 +242,9 @@ window.processarCSV = (csv, contaId) => {
         let valor = vals[0];
         if (valor === 0) return;
         
-        descArr = descArr.filter(d => !['Aprovado', 'Concluído', 'Saldo', 'Cartão', 'Pix'].includes(d));
+        // Filtro aprimorado para remover ruídos bancários inúteis e focar na Entidade/Nome
+        const lixo = ['aprovado', 'concluído', 'concluido', 'saldo', 'cartão', 'cartao', 'pix', 'pix recebido', 'pix enviado', 'transferência', 'transferencia', 'ted', 'doc', 'com saldo'];
+        descArr = descArr.filter(d => !lixo.includes(d.trim().toLowerCase()));
         descArr = descArr.filter(d => !d.match(/^\d{1,2}:\d{2}(:\d{2})?$/));
         let desc = descArr.sort((a,b)=>b.length - a.length)[0] || "Sem descrição";
         
@@ -270,7 +266,6 @@ window.processarCSV = (csv, contaId) => {
   }});
 };
 
-// Nova I.A. Bidimensional: Busca a palavra-chave ATRELADA ao tipo (receita ou despesa)
 function autoCategorizar(desc, tipoTransacao) {
   if(!desc) return 'classificar';
   const dUpper = desc.toUpperCase();
@@ -287,9 +282,6 @@ function finalizarImportacao() {
   } else alert("Nenhuma transação válida encontrada.");
 }
 
-// ==========================================
-// REGISTROS E FILTROS
-// ==========================================
 window.renderizarRegistrosSalvos = () => {
   const containerSanfona = document.getElementById('area-sanfonas');
   const containerPend = document.getElementById('area-pendentes');
@@ -475,7 +467,6 @@ window.salvarExtratoReal = async () => {
       
       if (selectCat !== 'classificar' && selectCat !== 'transferencia_interna' && selectCat !== 'avulso') {
         const chave = t.descricao.trim().toUpperCase();
-        // A I.A. grava a regra especificando também o TIPO da transação
         if (!window.regras.find(r => r.palavra_chave === chave && r.tipo === t.tipo)) {
           const novaRegra = { id: `REG-${Date.now()}`, palavra_chave: chave, tipo: t.tipo, categoria: selectCat };
           await setDoc(doc(db, "banco_regras", novaRegra.id), novaRegra);
@@ -491,9 +482,6 @@ window.salvarExtratoReal = async () => {
   window.renderizarDashboard();
 };
 
-// ==========================================
-// ZONA DE PERIGO COM VALIDAÇÃO DE SENHA
-// ==========================================
 window.apagarTodoOExtrato = () => {
   document.getElementById('acaoDestrutivaAlvo').value = 'extrato';
   document.getElementById('modal-seguranca-texto').innerText = 'Tem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO? (As contas e categorias serão mantidas).';
@@ -550,9 +538,6 @@ window.executarAcaoDestrutiva = async () => {
   }
 };
 
-// ==========================================
-// SEGURANÇA E EDIÇÃO CIRÚRGICA COM IA BIDIMENSIONAL
-// ==========================================
 window.recategorizarInline = async (id, selectEl, oldCat) => {
   const novaCat = selectEl.value;
   if (!confirm(`Deseja alterar a categoria deste lançamento para "${getCatLabel(novaCat)}"?`)) {
@@ -566,7 +551,6 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
     
     if (t) {
       t.categoria = novaCat;
-      // IA Bidimensional Reaprende a correção considerando o TIPO (receita/despesa)
       if (novaCat !== 'classificar' && novaCat !== 'transferencia_interna' && novaCat !== 'avulso') {
         const chave = t.descricao.trim().toUpperCase();
         const regraExiste = window.regras.find(r => r.palavra_chave === chave && r.tipo === t.tipo);
@@ -665,9 +649,6 @@ window.adicionarLancamentoAvulso = async () => {
   window.renderizarDashboard();
 };
 
-// ==========================================
-// DASHBOARD EXECUTIVO
-// ==========================================
 window.renderizarDashboard = () => {
   const container = document.getElementById('painel-dashboard-content');
   if (!container) return;
@@ -786,9 +767,6 @@ window.renderizarDashboard = () => {
   }, 100);
 };
 
-// ==========================================
-// FUNÇÕES AUXILIARES, ROTEAMENTO E AUTH
-// ==========================================
 window.renderizarDropdownContas = () => {
   const selC = document.getElementById('contaImportacao');
   const selF = document.getElementById('filtroConta');
