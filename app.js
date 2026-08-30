@@ -281,11 +281,23 @@ function finalizarImportacao() {
 }
 
 // ==========================================
-// REGISTROS E FILTROS
+// REGISTROS E FILTROS (COM MEMÓRIA DE ESTADO)
 // ==========================================
 window.renderizarRegistrosSalvos = () => {
   const containerSanfona = document.getElementById('area-sanfonas');
   const containerPend = document.getElementById('area-pendentes');
+  const appContent = document.getElementById('app-content');
+  
+  // 1. Memorizar estado atual para não quebrar a navegação do usuário
+  let activeMonth = null;
+  if (containerSanfona) {
+    const activeAcc = containerSanfona.querySelector('.accordion.active');
+    if (activeAcc) {
+      const divTitle = activeAcc.querySelector('div');
+      if (divTitle) activeMonth = divTitle.innerText.trim();
+    }
+  }
+  const currentScroll = appContent ? appContent.scrollTop : 0;
   
   if (window.transacoesPendentes.length > 0) {
     let htmlP = `<div class="noprint" style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; margin-bottom:20px;">
@@ -417,6 +429,8 @@ window.renderizarRegistrosSalvos = () => {
   containerSanfona.innerHTML = htmlS;
   
   const acc = document.getElementsByClassName("accordion");
+  let openedAccordion = false;
+  
   for (let i = 0; i < acc.length; i++) {
     acc[i].onclick = function() {
       this.classList.toggle("active");
@@ -424,8 +438,24 @@ window.renderizarRegistrosSalvos = () => {
       if (panel.style.maxHeight) panel.style.maxHeight = null;
       else panel.style.maxHeight = panel.scrollHeight + "px";
     };
+
+    // Restaura a sanfona que o usuário estava visualizando antes
+    const thisMonthText = acc[i].querySelector('div').innerText.trim();
+    if (activeMonth && thisMonthText === activeMonth) {
+      acc[i].click();
+      openedAccordion = true;
+    }
   }
-  if(acc.length > 0) acc[0].click();
+  
+  // Se não abriu nenhuma sanfona de memória, abre a primeira por padrão
+  if (!openedAccordion && acc.length > 0) {
+    acc[0].click();
+  }
+
+  // 2. Restaurar o scroll (com atraso leve para a sanfona ganhar altura)
+  if (appContent) {
+    setTimeout(() => { appContent.scrollTop = currentScroll; }, 10);
+  }
 };
 
 window.salvarExtratoReal = async () => {
@@ -523,7 +553,7 @@ window.executarAcaoDestrutiva = async () => {
 };
 
 // ==========================================
-// SEGURANÇA E EDIÇÃO COM APRENDIZADO DA IA
+// SEGURANÇA E EDIÇÃO CIRÚRGICA (SEM RECARREGAR A TELA INTEIRA)
 // ==========================================
 window.recategorizarInline = async (id, selectEl, oldCat) => {
   const novaCat = selectEl.value;
@@ -555,8 +585,23 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
     }
     
     window.mostrarToast("Categoria atualizada com sucesso!");
-    window.renderizarRegistrosSalvos();
+    
+    // Atualização Visual Cirúrgica no DOM (Evita flash e perda de scroll)
+    selectEl.setAttribute('onchange', `window.recategorizarInline('${id}', this, '${novaCat}')`);
+    
+    const printSpan = selectEl.nextElementSibling;
+    if (printSpan && printSpan.classList.contains('onlyprint')) {
+        printSpan.innerText = getCatLabel(novaCat);
+    }
+    
+    const tr = selectEl.closest('tr');
+    if (tr) {
+        tr.style.background = (novaCat === 'classificar') ? '#FEF9C3' : 'transparent';
+    }
+
+    // Atualiza o Dashboard silenciosamente em background
     window.renderizarDashboard();
+
   } catch(e) { alert("Erro ao atualizar."); selectEl.value = oldCat; }
 };
 
