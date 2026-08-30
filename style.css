@@ -184,9 +184,25 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
 .btn { background-color: var(--btn-primary); color: #fff; border: none; padding: 12px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; }
 .btn:hover { background-color: var(--btn-primary-hover); }
 
-.table-registros { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; background: white; border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); }
-.table-registros thead { background-color: #F8FAFC; border-bottom: 2px solid #CBD5E1; }
-.table-registros th { padding: 15px 12px; text-align: left; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 12px; }
+/* CONTÊINER DE TABELA COM ROLAGEM E CABEÇALHO FIXO */
+.table-container {
+  max-height: 55vh; 
+  overflow-y: auto; 
+  border: 1px solid var(--border-color); 
+  border-radius: 8px; 
+  background: white;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+.table-registros { width: 100%; border-collapse: collapse; font-size: 13px; margin: 0; background: white; }
+.table-registros thead { 
+  position: sticky; 
+  top: 0; 
+  z-index: 10; 
+  background-color: #F8FAFC; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08); 
+}
+.table-registros th { padding: 15px 12px; text-align: left; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 12px; border-bottom: 2px solid #CBD5E1; }
 .table-registros td { padding: 12px; border-bottom: 1px solid #E2E8F0; color: #334155; }
 .table-registros tbody tr:hover { background-color: #F1F5F9; }
 
@@ -215,6 +231,8 @@ body, html { margin: 0; padding: 0; background-color: var(--bg-app); color: var(
   #app-header, #app-tabs { display: none !important; }
   .card { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
   
+  .table-container { max-height: none !important; overflow: visible !important; border: none !important; box-shadow: none !important; }
   .table-registros { border: none !important; box-shadow: none !important; }
+  .table-registros thead { position: static !important; box-shadow: none !important; }
   .table-registros th, .table-registros td { border-bottom: 1px solid #ddd !important; padding: 8px !important; color: black !important; }
 }
