@@ -157,7 +157,7 @@ window.renderizarCategoriasConfig = () => {
 };
 
 // ==========================================
-// IMPORTAÇÃO E CAÇADOR INTELIGENTE (MAPEAMENTO BRADESCO)
+// IMPORTAÇÃO E CAÇADOR INTELIGENTE (FILTRO DE PRECISÃO MÁXIMA)
 // ==========================================
 function limparMoedaCSV(val) {
   let n = val.toString().replace(/[R\$\s\+]/gi, '').trim();
@@ -217,7 +217,7 @@ window.processarOFX = (ofx, contaId) => {
 window.processarCSV = (csv, contaId) => {
   window.transacoesPendentes = [];
   
-  // Variáveis para gravar em qual coluna está o Crédito e o Débito (Bradesco)
+  // Memória das colunas para separar Crédito e Débito no Bradesco
   let credIdx = -1;
   let debIdx = -1;
 
@@ -233,11 +233,17 @@ window.processarCSV = (csv, contaId) => {
         if(!cl) return;
         let up = cl.toUpperCase();
         
-        // Caçador de Cabeçalhos e Mapeamento
-        if (up === 'DATA' || up.includes('DATA DE') || up === 'VALOR' || up === 'HISTÓRICO' || up === 'HISTO' || up.includes('CRÉDITO') || up.includes('CREDITO') || up.includes('DÉBITO') || up.includes('DEBITO')) { 
+        // Caçador de Cabeçalhos por Correspondência Exata (Evita confundir com descrições)
+        const isCredHeader = up === 'CRÉDITO (R$)' || up === 'CREDITO (R$)' || up === 'CRÉDITO' || up === 'CREDITO' || up === 'ENTRADAS' || up === 'VALOR RECEBIDO';
+        const isDebHeader = up === 'DÉBITO (R$)' || up === 'DEBITO (R$)' || up === 'DÉBITO' || up === 'DEBITO' || up === 'SAÍDAS' || up === 'SAIDAS' || up === 'VALOR PAGO';
+        const isDataHeader = up === 'DATA' || up === 'DATA DE' || up === 'DATA LANÇAMENTO' || up === 'DATA LANCAMENTO';
+        const isHistHeader = up === 'HISTÓRICO' || up === 'HISTORICO' || up === 'DESCRIÇÃO' || up === 'DESCRICAO' || up === 'LANÇAMENTO' || up === 'LANCAMENTO';
+        const isOtherHeader = up === 'VALOR' || up === 'SALDO' || up === 'SALDO (R$)' || up === 'DOCTO.' || up === 'DOCUMENTO';
+
+        if (isCredHeader || isDebHeader || isDataHeader || isHistHeader || isOtherHeader) { 
           isHeaderRow = true; 
-          if (up.includes('CRÉDITO') || up.includes('CREDITO')) credIdx = idx;
-          if (up.includes('DÉBITO') || up.includes('DEBITO')) debIdx = idx;
+          if (isCredHeader) credIdx = idx;
+          if (isDebHeader) debIdx = idx;
         }
         
         let dM = cl.match(/(?:^|\s)(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})(?:\$|\s|T|$)/);
@@ -249,7 +255,6 @@ window.processarCSV = (csv, contaId) => {
         else if (/^[+-]?(R\$|BRL|U\$|\$)?\d{1,3}(,?\d{3})*\.\d{1,2}$/.test(numCheck)) isMoney = true;
         else if (/^[+-]?(R\$|BRL|U\$|\$)\d+$/.test(numCheck)) isMoney = true;
         
-        // Se achou dinheiro, grava o valor e qual o índice (coluna) em que ele estava
         if (isMoney) { let v = limparMoedaCSV(cl); vals.push({v: v, idx: idx}); return; }
         
         if (!cl.match(/^[0-9\-\.]+$/) && cl !== '') descArr.push(cl);
@@ -260,21 +265,22 @@ window.processarCSV = (csv, contaId) => {
         
         let valor = 0;
         
-        // Regra Especial Bradesco (Se o arquivo tiver colunas separadas para Débito e Crédito)
+        // Mapeia os valores baseado nas colunas do Bradesco ou cai no padrão PicPay/Flash
         if (credIdx > -1 && debIdx > -1) {
           let credObj = vals.find(x => x.idx === credIdx);
           let debObj = vals.find(x => x.idx === debIdx);
           
           if (credObj && credObj.v !== 0) valor = Math.abs(credObj.v);
-          else if (debObj && debObj.v !== 0) valor = -Math.abs(debObj.v); // Força ser negativo
+          else if (debObj && debObj.v !== 0) valor = -Math.abs(debObj.v); 
         } else {
-          // Regra Padrão (Nubank, PicPay, Flash, etc)
           valor = vals[0].v;
         }
 
         if (valor === 0) return;
         
-        descArr = descArr.filter(d => !['Aprovado', 'Concluído', 'Saldo', 'Cartão', 'Pix'].includes(d));
+        // Remove sujeiras e jargões para garantir que a IA leia a Entidade verdadeira
+        const lixo = ['aprovado', 'concluído', 'concluido', 'saldo', 'cartão', 'cartao', 'pix', 'pix recebido', 'pix enviado', 'transferência', 'transferencia', 'ted', 'doc', 'com saldo'];
+        descArr = descArr.filter(d => !lixo.includes(d.trim().toLowerCase()));
         descArr = descArr.filter(d => !d.match(/^\d{1,2}:\d{2}(:\d{2})?$/));
         let desc = descArr.sort((a,b)=>b.length - a.length)[0] || "Sem descrição";
         
@@ -809,9 +815,6 @@ window.renderizarDashboard = () => {
   }, 100);
 };
 
-// ==========================================
-// FUNÇÕES AUXILIARES, ROTEAMENTO E AUTH
-// ==========================================
 window.renderizarDropdownContas = () => {
   const selC = document.getElementById('contaImportacao');
   const selF = document.getElementById('filtroConta');
