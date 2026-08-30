@@ -58,6 +58,9 @@ window.carregarTodosOsDados = async () => {
   } catch (e) { console.error("Erro DB: ", e); }
 };
 
+// ==========================================
+// MÓDULO DE CATEGORIAS
+// ==========================================
 function getTodasCategorias() { return [...CATEGORIAS_PADRAO, ...window.categoriasExtras]; }
 function getCatLabel(val) { const found = getTodasCategorias().find(c => c.v === val); return found ? found.l : val; }
 function getSelectOptions(catSelected) { return getTodasCategorias().map(c => `<option value="${c.v}" ${catSelected === c.v ? 'selected' : ''}>${c.l}</option>`).join(''); }
@@ -153,6 +156,9 @@ window.renderizarCategoriasConfig = () => {
   `).join('');
 };
 
+// ==========================================
+// IMPORTAÇÃO E CAÇADOR INTELIGENTE (MAPEAMENTO BRADESCO)
+// ==========================================
 function limparMoedaCSV(val) {
   let n = val.toString().replace(/[R\$\s\+]/gi, '').trim();
   if (n.includes('.') && n.includes(',')) n = n.replace(/\./g,'').replace(',', '.');
@@ -210,19 +216,29 @@ window.processarOFX = (ofx, contaId) => {
 
 window.processarCSV = (csv, contaId) => {
   window.transacoesPendentes = [];
+  
+  // Variáveis para gravar em qual coluna está o Crédito e o Débito (Bradesco)
+  let credIdx = -1;
+  let debIdx = -1;
+
   Papa.parse(csv, { skipEmptyLines: true, complete: function(res) {
     res.data.forEach((cols, i) => {
       if (cols.length < 2) return;
       let data = "", vals = [], descArr = [];
       let isHeaderRow = false;
       
-      cols.forEach(col => {
+      cols.forEach((col, idx) => {
         if(typeof col !== 'string') return;
         let cl = col.trim().replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-');
         if(!cl) return;
         let up = cl.toUpperCase();
         
-        if (up === 'DATA' || up.includes('DATA DE') || up === 'VALOR' || up === 'HISTÓRICO' || up === 'HISTO') { isHeaderRow = true; }
+        // Caçador de Cabeçalhos e Mapeamento
+        if (up === 'DATA' || up.includes('DATA DE') || up === 'VALOR' || up === 'HISTÓRICO' || up === 'HISTO' || up.includes('CRÉDITO') || up.includes('CREDITO') || up.includes('DÉBITO') || up.includes('DEBITO')) { 
+          isHeaderRow = true; 
+          if (up.includes('CRÉDITO') || up.includes('CREDITO')) credIdx = idx;
+          if (up.includes('DÉBITO') || up.includes('DEBITO')) debIdx = idx;
+        }
         
         let dM = cl.match(/(?:^|\s)(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})(?:\$|\s|T|$)/);
         if (!data && dM) { data = dM[1]; return; }
@@ -233,18 +249,32 @@ window.processarCSV = (csv, contaId) => {
         else if (/^[+-]?(R\$|BRL|U\$|\$)?\d{1,3}(,?\d{3})*\.\d{1,2}$/.test(numCheck)) isMoney = true;
         else if (/^[+-]?(R\$|BRL|U\$|\$)\d+$/.test(numCheck)) isMoney = true;
         
-        if (isMoney) { let v = limparMoedaCSV(cl); vals.push(v); return; }
+        // Se achou dinheiro, grava o valor e qual o índice (coluna) em que ele estava
+        if (isMoney) { let v = limparMoedaCSV(cl); vals.push({v: v, idx: idx}); return; }
+        
         if (!cl.match(/^[0-9\-\.]+$/) && cl !== '') descArr.push(cl);
       });
       
       if (isHeaderRow) return;
       if (data && vals.length > 0) {
-        let valor = vals[0];
+        
+        let valor = 0;
+        
+        // Regra Especial Bradesco (Se o arquivo tiver colunas separadas para Débito e Crédito)
+        if (credIdx > -1 && debIdx > -1) {
+          let credObj = vals.find(x => x.idx === credIdx);
+          let debObj = vals.find(x => x.idx === debIdx);
+          
+          if (credObj && credObj.v !== 0) valor = Math.abs(credObj.v);
+          else if (debObj && debObj.v !== 0) valor = -Math.abs(debObj.v); // Força ser negativo
+        } else {
+          // Regra Padrão (Nubank, PicPay, Flash, etc)
+          valor = vals[0].v;
+        }
+
         if (valor === 0) return;
         
-        // Filtro aprimorado para remover ruídos bancários inúteis e focar na Entidade/Nome
-        const lixo = ['aprovado', 'concluído', 'concluido', 'saldo', 'cartão', 'cartao', 'pix', 'pix recebido', 'pix enviado', 'transferência', 'transferencia', 'ted', 'doc', 'com saldo'];
-        descArr = descArr.filter(d => !lixo.includes(d.trim().toLowerCase()));
+        descArr = descArr.filter(d => !['Aprovado', 'Concluído', 'Saldo', 'Cartão', 'Pix'].includes(d));
         descArr = descArr.filter(d => !d.match(/^\d{1,2}:\d{2}(:\d{2})?$/));
         let desc = descArr.sort((a,b)=>b.length - a.length)[0] || "Sem descrição";
         
@@ -282,6 +312,9 @@ function finalizarImportacao() {
   } else alert("Nenhuma transação válida encontrada.");
 }
 
+// ==========================================
+// REGISTROS E FILTROS
+// ==========================================
 window.renderizarRegistrosSalvos = () => {
   const containerSanfona = document.getElementById('area-sanfonas');
   const containerPend = document.getElementById('area-pendentes');
@@ -482,6 +515,9 @@ window.salvarExtratoReal = async () => {
   window.renderizarDashboard();
 };
 
+// ==========================================
+// ZONA DE PERIGO COM VALIDAÇÃO DE SENHA
+// ==========================================
 window.apagarTodoOExtrato = () => {
   document.getElementById('acaoDestrutivaAlvo').value = 'extrato';
   document.getElementById('modal-seguranca-texto').innerText = 'Tem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO? (As contas e categorias serão mantidas).';
@@ -538,6 +574,9 @@ window.executarAcaoDestrutiva = async () => {
   }
 };
 
+// ==========================================
+// SEGURANÇA E EDIÇÃO COM APRENDIZADO DA IA
+// ==========================================
 window.recategorizarInline = async (id, selectEl, oldCat) => {
   const novaCat = selectEl.value;
   if (!confirm(`Deseja alterar a categoria deste lançamento para "${getCatLabel(novaCat)}"?`)) {
@@ -649,6 +688,9 @@ window.adicionarLancamentoAvulso = async () => {
   window.renderizarDashboard();
 };
 
+// ==========================================
+// DASHBOARD EXECUTIVO
+// ==========================================
 window.renderizarDashboard = () => {
   const container = document.getElementById('painel-dashboard-content');
   if (!container) return;
@@ -767,6 +809,9 @@ window.renderizarDashboard = () => {
   }, 100);
 };
 
+// ==========================================
+// FUNÇÕES AUXILIARES, ROTEAMENTO E AUTH
+// ==========================================
 window.renderizarDropdownContas = () => {
   const selC = document.getElementById('contaImportacao');
   const selF = document.getElementById('filtroConta');
