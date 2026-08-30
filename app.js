@@ -47,6 +47,42 @@ window.limparTextoParaIA = (texto) => {
   return limpo;
 };
 
+// Alterna a interface visual entre Fatura Mensal e Período Livre
+window.alternarModoPeriodo = () => {
+  const modo = document.getElementById('modoPeriodo').value;
+  const bMes = document.getElementById('blocoFiltroMes');
+  const bIni = document.getElementById('blocoFiltroDataInicio');
+  const bFim = document.getElementById('blocoFiltroDataFim');
+
+  if (modo === 'mes') {
+    bMes.classList.remove('hidden');
+    bIni.classList.add('hidden');
+    bFim.classList.add('hidden');
+  } else {
+    bMes.classList.add('hidden');
+    bIni.classList.remove('hidden');
+    bFim.classList.remove('hidden');
+  }
+  window.renderizarRegistrosSalvos();
+};
+
+window.atualizarFiltroMeses = () => {
+  const sel = document.getElementById('filtroMes');
+  if (!sel) return;
+  const valAtual = sel.value;
+  const meses = new Set();
+  window.transacoes.forEach(t => {
+    const [y, m] = t.data.split('-');
+    meses.add(`${m}/${y}`);
+  });
+  const mesesArr = Array.from(meses).sort((a,b) => {
+    const [ma, ya] = a.split('/'); const [mb, yb] = b.split('/');
+    return new Date(`${yb}-${mb}-01`) - new Date(`${ya}-${ma}-01`);
+  });
+  sel.innerHTML = '<option value="todos">Todos os Meses</option>' + mesesArr.map(m => `<option value="${m}">${m}</option>`).join('');
+  if (mesesArr.includes(valAtual)) sel.value = valAtual;
+};
+
 window.carregarTodosOsDados = async () => {
   try {
     const [snapContas, snapRegras, snapTransacoes, snapCats] = await Promise.all([
@@ -61,6 +97,7 @@ window.carregarTodosOsDados = async () => {
     window.transacoes = snapTransacoes.docs.map(d => d.data());
     window.categoriasExtras = snapCats.docs.map(d => d.data());
     
+    window.atualizarFiltroMeses();
     window.renderizarContas();
     window.renderizarDropdownContas();
     window.renderizarCategoriasConfig();
@@ -314,21 +351,17 @@ function finalizarImportacao() {
   } else alert("Nenhuma transação válida encontrada.");
 }
 
-// A NOVA ABA DE REGISTROS (TABELA ÚNICA + TOTALIZADOR + FILTROS DINÂMICOS)
 window.renderizarRegistrosSalvos = () => {
   const containerArea = document.getElementById('area-registros-filtrados');
   const containerResumo = document.getElementById('painel-resumo-filtros');
   const containerPend = document.getElementById('area-pendentes');
-  const appContent = document.getElementById('app-content');
-  
-  const currentScroll = appContent ? appContent.scrollTop : 0;
   
   if (window.transacoesPendentes.length > 0) {
     let htmlP = `<div class="noprint" style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; margin-bottom:20px;">
       <h4 style="color: #d84315; margin-top:0;">${window.transacoesPendentes.length} Lançamentos Pendentes</h4>
-      <div style="max-height: 300px; overflow-y: auto; background: white; border: 1px solid #ffcc80;">
-      <table class="table-registros" style="margin-top:0; border:none; box-shadow:none;" id="tabela-pendentes">
-      <thead><tr style="background: #ffe0b2;"><th>Data</th><th>Descrição</th><th style="text-align:right;">Valor</th><th>Categoria</th></tr></thead><tbody>`;
+      <div class="table-container" style="max-height: 300px; border-color: #ffcc80;">
+      <table class="table-registros" id="tabela-pendentes">
+      <thead style="background-color: #ffe0b2;"><tr><th>Data</th><th>Descrição</th><th style="text-align:right;">Valor</th><th>Categoria</th></tr></thead><tbody>`;
     window.transacoesPendentes.forEach(t => {
       const [,m,d] = t.data.split('-');
       htmlP += `<tr data-id="${t.id}">
@@ -344,9 +377,7 @@ window.renderizarRegistrosSalvos = () => {
     if(containerPend) containerPend.innerHTML = htmlP;
   } else { if(containerPend) containerPend.innerHTML = ""; }
 
-  // Captura dos novos filtros dinâmicos
-  const fDataInicio = document.getElementById('filtroDataInicio') ? document.getElementById('filtroDataInicio').value : '';
-  const fDataFim = document.getElementById('filtroDataFim') ? document.getElementById('filtroDataFim').value : '';
+  const modoPeriodo = document.getElementById('modoPeriodo') ? document.getElementById('modoPeriodo').value : 'mes';
   const fConta = document.getElementById('filtroConta') ? document.getElementById('filtroConta').value : 'todas';
   const fCat = document.getElementById('filtroCategoria') ? document.getElementById('filtroCategoria').value : 'todas';
   const fTipo = document.getElementById('filtroTipo') ? document.getElementById('filtroTipo').value : 'todos';
@@ -354,8 +385,22 @@ window.renderizarRegistrosSalvos = () => {
 
   let trns = [...window.transacoes];
   
-  if (fDataInicio) trns = trns.filter(t => t.data >= fDataInicio);
-  if (fDataFim) trns = trns.filter(t => t.data <= fDataFim);
+  // O NOVO FILTRO DUAL (MÊS FECHADO OU PERÍODO LIVRE)
+  if (modoPeriodo === 'mes') {
+    const fMes = document.getElementById('filtroMes') ? document.getElementById('filtroMes').value : 'todos';
+    if (fMes !== 'todos') {
+      trns = trns.filter(t => {
+        const [y, m] = t.data.split('-');
+        return `${m}/${y}` === fMes;
+      });
+    }
+  } else {
+    const fDataInicio = document.getElementById('filtroDataInicio') ? document.getElementById('filtroDataInicio').value : '';
+    const fDataFim = document.getElementById('filtroDataFim') ? document.getElementById('filtroDataFim').value : '';
+    if (fDataInicio) trns = trns.filter(t => t.data >= fDataInicio);
+    if (fDataFim) trns = trns.filter(t => t.data <= fDataFim);
+  }
+
   if (fConta !== 'todas') trns = trns.filter(t => t.contaOrigem === fConta);
   if (fCat !== 'todas') trns = trns.filter(t => t.categoria === fCat);
   if (fTipo !== 'todos') trns = trns.filter(t => t.tipo === fTipo);
@@ -399,19 +444,21 @@ window.renderizarRegistrosSalvos = () => {
     `;
   }
 
+  // Tabela de Registros com Container de Scroll (Cabeçalho Fixo feito via CSS)
   let htmlS = `
-    <table class="table-registros">
-      <thead>
-        <tr>
-          <th style="width: 10%;">Data</th>
-          <th style="width: 40%;">Descrição</th>
-          <th style="text-align:right; width: 15%;">Valor</th>
-          <th style="width: 20%;">Categoria</th>
-          <th class="noprint" style="text-align:center; width: 15%;">Ações</th>
-        </tr>
-      </thead>
-      <tbody>`;
-      
+    <div class="table-container">
+      <table class="table-registros">
+        <thead>
+          <tr>
+            <th style="width: 10%;">Data</th>
+            <th style="width: 40%;">Descrição</th>
+            <th style="text-align:right; width: 15%;">Valor</th>
+            <th style="width: 20%;">Categoria</th>
+            <th class="noprint" style="text-align:center; width: 15%;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>`;
+        
   trns.forEach(t => {
     const [,mes, dia] = t.data.split('-');
     const bgCat = t.categoria === 'classificar' ? 'background:#FEF9C3;' : '';
@@ -432,10 +479,9 @@ window.renderizarRegistrosSalvos = () => {
       </td>
     </tr>`;
   });
-  htmlS += `</tbody></table>`;
+  htmlS += `</tbody></table></div>`;
   
   if(containerArea) containerArea.innerHTML = htmlS;
-  if (appContent) setTimeout(() => { appContent.scrollTop = currentScroll; }, 10);
 };
 
 window.salvarExtratoReal = async () => {
@@ -469,6 +515,7 @@ window.salvarExtratoReal = async () => {
   
   window.mostrarToast(`${salvas} lançamentos salvos!`);
   window.transacoesPendentes = [];
+  window.atualizarFiltroMeses();
   window.renderizarRegistrosSalvos();
   window.renderizarDashboard();
 };
@@ -504,6 +551,7 @@ window.executarAcaoDestrutiva = async () => {
       for (let t of window.transacoes) { await deleteDoc(doc(db, "banco_transacoes", t.id)); }
       window.transacoes = [];
       window.mostrarToast("Sistema financeiro limpo e zerado!");
+      window.atualizarFiltroMeses();
       window.renderizarRegistrosSalvos();
       window.renderizarDashboard();
     } else if (acao === 'ia') {
@@ -562,6 +610,7 @@ window.excluirLancamento = async (id) => {
     await deleteDoc(doc(db, "banco_transacoes", id));
     window.transacoes = window.transacoes.filter(t => t.id !== id);
     window.mostrarToast("Lançamento excluído.");
+    window.atualizarFiltroMeses();
     window.renderizarRegistrosSalvos();
     window.renderizarDashboard();
   } catch (e) { alert("Erro ao excluir."); }
@@ -622,6 +671,7 @@ window.adicionarLancamentoAvulso = async () => {
   document.getElementById('avulsoDesc').value = '';
   document.getElementById('avulsoValor').value = '';
   
+  window.atualizarFiltroMeses();
   window.mudarAba('registros');
   window.renderizarRegistrosSalvos();
   window.renderizarDashboard();
