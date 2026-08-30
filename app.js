@@ -35,15 +35,10 @@ const CATEGORIAS_PADRAO = [
   {v: 'avulso', l: '🏛️ Saldo Inicial'}
 ];
 
+// O TEXTO DO OLHO NÃO MUDA MAIS. A LINHA DIAGONAL É FEITA VIA CSS.
 window.togglePrivacy = () => {
   const body = document.body;
   body.classList.toggle('privacy-mode');
-  const btn = document.getElementById('btn-privacy');
-  if (body.classList.contains('privacy-mode')) {
-    btn.innerText = '🙈';
-  } else {
-    btn.innerText = '👁️';
-  }
   if (chartInstance) chartInstance.update();
 };
 
