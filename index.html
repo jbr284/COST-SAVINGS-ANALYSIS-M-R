@@ -107,7 +107,8 @@
           </div>
           
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px;">
-            <div class="input-group"><label>Mês / Período:</label><select id="filtroMes" onchange="window.renderizarRegistrosSalvos()"><option value="todos">Todos os Meses</option></select></div>
+            <div class="input-group"><label>Data Inicial:</label><input type="date" id="filtroDataInicio" onchange="window.renderizarRegistrosSalvos()"></div>
+            <div class="input-group"><label>Data Final:</label><input type="date" id="filtroDataFim" onchange="window.renderizarRegistrosSalvos()"></div>
             <div class="input-group"><label>Banco / Conta:</label><select id="filtroConta" onchange="window.renderizarRegistrosSalvos()"></select></div>
             <div class="input-group"><label>Categoria:</label><select id="filtroCategoria" onchange="window.renderizarRegistrosSalvos()"></select></div>
             <div class="input-group"><label>Tipo:</label><select id="filtroTipo" onchange="window.renderizarRegistrosSalvos()"><option value="todos">Todos</option><option value="receita">Receitas (+)</option><option value="despesa">Despesas (-)</option></select></div>
