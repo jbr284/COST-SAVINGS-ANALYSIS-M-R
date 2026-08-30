@@ -55,13 +55,11 @@
         <div class="hall-wrapper">
           <div class="hall-content">
             <h2 class="hall-title">COST SAVINGS ANALYSIS M&R</h2>
-            
             <button class="btn-hall btn-hall-blue" onclick="window.mudarAba('importacao')">IMPORTAR EXTRATOS</button>
             <button class="btn-hall btn-hall-green" onclick="window.mudarAba('registros')">REGISTROS E EXTRATOS</button>
             <button class="btn-hall btn-hall-orange" onclick="window.mudarAba('dashboard')">INDICADORES</button>
             <button class="btn-hall btn-hall-gray" onclick="window.mudarAba('configuracoes')">SETUP</button>
             <button class="btn-hall btn-hall-red" onclick="window.sairApp()">SAIR DO SISTEMA</button>
-            
           </div>
         </div>
       </div>
@@ -96,39 +94,30 @@
       </div>
 
       <div id="painel-registros" class="panel">
-        
-        <!-- Cabeçalho Exclusivo para o PDF -->
         <div class="onlyprint" style="text-align: center; margin-bottom: 20px;">
           <h2 style="color: #0F172A; margin: 0;">COST SAVINGS ANALYSIS M&R</h2>
-          <p style="margin: 5px 0; color: #64748B;">Relatório Financeiro de Registros e Extratos</p>
+          <p style="margin: 5px 0; color: #64748B;">Relatório Financeiro Analítico</p>
           <hr style="border: 1px solid #E2E8F0; margin-top: 15px;">
         </div>
 
         <div class="card noprint">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
-            <h3 style="margin: 0; border: none; padding: 0;">Filtros de Pesquisa</h3>
+            <h3 style="margin: 0; border: none; padding: 0;">Filtros e Pesquisa Dinâmica</h3>
             <button class="btn" style="background-color: #334155; width: auto;" onclick="window.print()">🖨️ Exportar PDF</button>
           </div>
           
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px;">
-            <div class="input-group"><label>Banco/Conta:</label><select id="filtroConta" onchange="window.renderizarRegistrosSalvos()"></select></div>
+            <div class="input-group"><label>Mês / Período:</label><select id="filtroMes" onchange="window.renderizarRegistrosSalvos()"><option value="todos">Todos os Meses</option></select></div>
+            <div class="input-group"><label>Banco / Conta:</label><select id="filtroConta" onchange="window.renderizarRegistrosSalvos()"></select></div>
             <div class="input-group"><label>Categoria:</label><select id="filtroCategoria" onchange="window.renderizarRegistrosSalvos()"></select></div>
             <div class="input-group"><label>Tipo:</label><select id="filtroTipo" onchange="window.renderizarRegistrosSalvos()"><option value="todos">Todos</option><option value="receita">Receitas (+)</option><option value="despesa">Despesas (-)</option></select></div>
-            <div class="input-group">
-              <label>Ordenar Por:</label>
-              <select id="filtroOrdem" onchange="window.renderizarRegistrosSalvos()">
-                <option value="data_desc">Data (Mais Novos)</option>
-                <option value="data_asc">Data (Mais Antigos)</option>
-                <option value="valor_desc">Valor (Maior p/ Menor)</option>
-                <option value="valor_asc">Valor (Menor p/ Maior)</option>
-                <option value="az">Descrição (A-Z)</option>
-                <option value="za">Descrição (Z-A)</option>
-              </select>
-            </div>
+            <div class="input-group" style="grid-column: span 2;"><label>Pesquisar por Nome ou Valor:</label><input type="text" id="filtroTexto" placeholder="Ex: Supermercado, Julia, 150..." oninput="window.renderizarRegistrosSalvos()"></div>
           </div>
         </div>
+
         <div id="area-pendentes"></div>
-        <div id="area-sanfonas"></div>
+        <div id="painel-resumo-filtros"></div>
+        <div id="area-registros-filtrados"></div>
       </div>
 
       <div id="painel-dashboard" class="panel">
@@ -207,9 +196,6 @@
     </main>
   </div>
 
-  <!-- =========================================
-       MODAIS DE EDIÇÃO (OVERLAYS)
-  ========================================= -->
   <div id="modal-editar" class="modal-overlay hidden noprint">
     <div class="modal-box">
       <h3 style="color: var(--tab-bg); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top:0;">Editar Lançamento</h3>
