@@ -35,6 +35,36 @@ const CATEGORIAS_PADRAO = [
   {v: 'avulso', l: '🏛️ Saldo Inicial'}
 ];
 
+// O CÉREBRO DA IA ABSTRATA: Remove datas residuais e prefixos bancários
+window.limparTextoParaIA = (texto) => {
+  if (!texto) return "";
+  let limpo = texto.toUpperCase();
+  limpo = limpo.replace(/PIX.*?DES:/g, '')
+               .replace(/PAGTO ELETRONICO TRIBUTO/g, '')
+               .replace(/TED C SAL P\/POUPANCA/g, '');
+  limpo = limpo.replace(/\b\d{2}\/\d{2}(?:\/\d{2,4})?\b/g, ''); 
+  limpo = limpo.replace(/\b\d{5,}\b/g, ''); 
+  limpo = limpo.replace(/[-/]/g, ' ').replace(/\s+/g, ' ').trim();
+  return limpo;
+};
+
+window.atualizarFiltroMeses = () => {
+  const sel = document.getElementById('filtroMes');
+  if (!sel) return;
+  const valAtual = sel.value;
+  const meses = new Set();
+  window.transacoes.forEach(t => {
+    const [y, m] = t.data.split('-');
+    meses.add(`${m}/${y}`);
+  });
+  const mesesArr = Array.from(meses).sort((a,b) => {
+    const [ma, ya] = a.split('/'); const [mb, yb] = b.split('/');
+    return new Date(`${yb}-${mb}-01`) - new Date(`${ya}-${ma}-01`);
+  });
+  sel.innerHTML = '<option value="todos">Todos os Meses / Período Completo</option>' + mesesArr.map(m => `<option value="${m}">${m}</option>`).join('');
+  if (mesesArr.includes(valAtual)) sel.value = valAtual;
+};
+
 window.carregarTodosOsDados = async () => {
   try {
     const [snapContas, snapRegras, snapTransacoes, snapCats] = await Promise.all([
@@ -49,6 +79,7 @@ window.carregarTodosOsDados = async () => {
     window.transacoes = snapTransacoes.docs.map(d => d.data());
     window.categoriasExtras = snapCats.docs.map(d => d.data());
     
+    window.atualizarFiltroMeses();
     window.renderizarContas();
     window.renderizarDropdownContas();
     window.renderizarCategoriasConfig();
@@ -58,9 +89,6 @@ window.carregarTodosOsDados = async () => {
   } catch (e) { console.error("Erro DB: ", e); }
 };
 
-// ==========================================
-// MÓDULO DE CATEGORIAS
-// ==========================================
 function getTodasCategorias() { return [...CATEGORIAS_PADRAO, ...window.categoriasExtras]; }
 function getCatLabel(val) { const found = getTodasCategorias().find(c => c.v === val); return found ? found.l : val; }
 function getSelectOptions(catSelected) { return getTodasCategorias().map(c => `<option value="${c.v}" ${catSelected === c.v ? 'selected' : ''}>${c.l}</option>`).join(''); }
@@ -156,9 +184,6 @@ window.renderizarCategoriasConfig = () => {
   `).join('');
 };
 
-// ==========================================
-// IMPORTAÇÃO E CAÇADOR INTELIGENTE (FILTRO DE PRECISÃO MÁXIMA)
-// ==========================================
 function limparMoedaCSV(val) {
   let n = val.toString().replace(/[R\$\s\+]/gi, '').trim();
   if (n.includes('.') && n.includes(',')) n = n.replace(/\./g,'').replace(',', '.');
@@ -216,8 +241,6 @@ window.processarOFX = (ofx, contaId) => {
 
 window.processarCSV = (csv, contaId) => {
   window.transacoesPendentes = [];
-  
-  // Memória das colunas para separar Crédito e Débito no Bradesco
   let credIdx = -1;
   let debIdx = -1;
 
@@ -233,7 +256,6 @@ window.processarCSV = (csv, contaId) => {
         if(!cl) return;
         let up = cl.toUpperCase();
         
-        // Caçador de Cabeçalhos por Correspondência Exata (Evita confundir com descrições)
         const isCredHeader = up === 'CRÉDITO (R$)' || up === 'CREDITO (R$)' || up === 'CRÉDITO' || up === 'CREDITO' || up === 'ENTRADAS' || up === 'VALOR RECEBIDO';
         const isDebHeader = up === 'DÉBITO (R$)' || up === 'DEBITO (R$)' || up === 'DÉBITO' || up === 'DEBITO' || up === 'SAÍDAS' || up === 'SAIDAS' || up === 'VALOR PAGO';
         const isDataHeader = up === 'DATA' || up === 'DATA DE' || up === 'DATA LANÇAMENTO' || up === 'DATA LANCAMENTO';
@@ -262,23 +284,16 @@ window.processarCSV = (csv, contaId) => {
       
       if (isHeaderRow) return;
       if (data && vals.length > 0) {
-        
         let valor = 0;
-        
-        // Mapeia os valores baseado nas colunas do Bradesco ou cai no padrão PicPay/Flash
         if (credIdx > -1 && debIdx > -1) {
           let credObj = vals.find(x => x.idx === credIdx);
           let debObj = vals.find(x => x.idx === debIdx);
-          
           if (credObj && credObj.v !== 0) valor = Math.abs(credObj.v);
           else if (debObj && debObj.v !== 0) valor = -Math.abs(debObj.v); 
-        } else {
-          valor = vals[0].v;
-        }
+        } else { valor = vals[0].v; }
 
         if (valor === 0) return;
         
-        // Remove sujeiras e jargões para garantir que a IA leia a Entidade verdadeira
         const lixo = ['aprovado', 'concluído', 'concluido', 'saldo', 'cartão', 'cartao', 'pix', 'pix recebido', 'pix enviado', 'transferência', 'transferencia', 'ted', 'doc', 'com saldo'];
         descArr = descArr.filter(d => !lixo.includes(d.trim().toLowerCase()));
         descArr = descArr.filter(d => !d.match(/^\d{1,2}:\d{2}(:\d{2})?$/));
@@ -304,9 +319,9 @@ window.processarCSV = (csv, contaId) => {
 
 function autoCategorizar(desc, tipoTransacao) {
   if(!desc) return 'classificar';
-  const dUpper = desc.toUpperCase();
+  const dClean = window.limparTextoParaIA(desc);
   for (let r of window.regras) { 
-    if (dUpper.includes(r.palavra_chave) && r.tipo === tipoTransacao) return r.categoria; 
+    if (dClean.includes(r.palavra_chave) && r.tipo === tipoTransacao) return r.categoria; 
   }
   return 'classificar';
 }
@@ -318,172 +333,128 @@ function finalizarImportacao() {
   } else alert("Nenhuma transação válida encontrada.");
 }
 
-// ==========================================
-// REGISTROS E FILTROS
-// ==========================================
+// A NOVA ABA DE REGISTROS (TABELA ÚNICA + TOTALIZADOR)
 window.renderizarRegistrosSalvos = () => {
-  const containerSanfona = document.getElementById('area-sanfonas');
+  const containerArea = document.getElementById('area-registros-filtrados');
+  const containerResumo = document.getElementById('painel-resumo-filtros');
   const containerPend = document.getElementById('area-pendentes');
-  const appContent = document.getElementById('app-content');
-  
-  let activeMonth = null;
-  if (containerSanfona) {
-    const activeAcc = containerSanfona.querySelector('.accordion.active');
-    if (activeAcc) {
-      const divTitle = activeAcc.querySelector('div');
-      if (divTitle) activeMonth = divTitle.innerText.trim();
-    }
-  }
-  const currentScroll = appContent ? appContent.scrollTop : 0;
   
   if (window.transacoesPendentes.length > 0) {
     let htmlP = `<div class="noprint" style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; margin-bottom:20px;">
       <h4 style="color: #d84315; margin-top:0;">${window.transacoesPendentes.length} Lançamentos Pendentes</h4>
       <div style="max-height: 300px; overflow-y: auto; background: white; border: 1px solid #ffcc80;">
-      <table style="width: 100%; border-collapse: collapse; font-size: 13px;" id="tabela-pendentes">
+      <table class="table-registros" style="margin-top:0; border:none; box-shadow:none;" id="tabela-pendentes">
       <thead><tr style="background: #ffe0b2;"><th>Data</th><th>Descrição</th><th style="text-align:right;">Valor</th><th>Categoria</th></tr></thead><tbody>`;
-    
     window.transacoesPendentes.forEach(t => {
       const [,m,d] = t.data.split('-');
-      htmlP += `<tr style="border-bottom: 1px solid #eee;" data-id="${t.id}">
-        <td style="padding: 10px;">${d}/${m}</td>
-        <td style="padding: 10px; font-weight:bold;">${t.descricao}</td>
-        <td style="padding: 10px; text-align:right; color:${t.valor<0?'#c62828':'#2e7d32'};">R$ ${t.valor.toFixed(2)}</td>
-        <td style="padding: 10px;"><select class="select-categoria" style="padding: 6px; width:100%; border-radius:4px; border:1px solid #ccc;">${getSelectOptions(t.categoria)}</select></td>
+      htmlP += `<tr data-id="${t.id}">
+        <td>${d}/${m}</td>
+        <td style="font-weight:bold;">${t.descricao}</td>
+        <td style="text-align:right; color:${t.valor<0?'#c62828':'#2e7d32'};">R$ ${t.valor.toFixed(2)}</td>
+        <td><select class="select-categoria" style="padding: 6px; width:100%; border-radius:4px; border:1px solid #ccc;">${getSelectOptions(t.categoria)}</select></td>
       </tr>`;
     });
     htmlP += `</tbody></table></div>
       <button class="btn" style="background-color: #f57c00; margin-top: 15px;" onclick="window.salvarExtratoReal()">Gravar Lançamentos e Ensinar IA</button>
     </div>`;
-    containerPend.innerHTML = htmlP;
-  } else { containerPend.innerHTML = ""; }
+    if(containerPend) containerPend.innerHTML = htmlP;
+  } else { if(containerPend) containerPend.innerHTML = ""; }
 
-  const fConta = document.getElementById('filtroConta').value;
-  const fCat = document.getElementById('filtroCategoria').value;
-  const fTipo = document.getElementById('filtroTipo').value;
-  const fOrdem = document.getElementById('filtroOrdem').value;
+  const fMes = document.getElementById('filtroMes') ? document.getElementById('filtroMes').value : 'todos';
+  const fConta = document.getElementById('filtroConta') ? document.getElementById('filtroConta').value : 'todas';
+  const fCat = document.getElementById('filtroCategoria') ? document.getElementById('filtroCategoria').value : 'todas';
+  const fTipo = document.getElementById('filtroTipo') ? document.getElementById('filtroTipo').value : 'todos';
+  const fTextoRaw = document.getElementById('filtroTexto') ? document.getElementById('filtroTexto').value.trim() : '';
 
-  let trnsBaseBanco = [...window.transacoes];
-  if (fConta !== 'todas') trnsBaseBanco = trnsBaseBanco.filter(t => t.contaOrigem === fConta);
+  let trns = [...window.transacoes];
   
-  trnsBaseBanco.sort((a,b) => a.data.localeCompare(b.data));
+  if (fMes !== 'todos') {
+    trns = trns.filter(t => {
+      const [y, m] = t.data.split('-');
+      return `${m}/${y}` === fMes;
+    });
+  }
+  if (fConta !== 'todas') trns = trns.filter(t => t.contaOrigem === fConta);
+  if (fCat !== 'todas') trns = trns.filter(t => t.categoria === fCat);
+  if (fTipo !== 'todos') trns = trns.filter(t => t.tipo === fTipo);
+  if (fTextoRaw !== '') {
+    const txt = fTextoRaw.toLowerCase();
+    trns = trns.filter(t => t.descricao.toLowerCase().includes(txt) || Math.abs(t.valor).toString().includes(txt));
+  }
   
-  const gruposInfo = {};
-  let saldoRealAcumulado = 0;
-  
-  trnsBaseBanco.forEach(t => {
-    const [a, m] = t.data.split('-');
-    const mesAno = `${m}/${a}`;
-    if(!gruposInfo[mesAno]) gruposInfo[mesAno] = { saldoFinal: 0, trnsFiltradas: [] };
-    saldoRealAcumulado += t.valor;
-    gruposInfo[mesAno].saldoFinal = saldoRealAcumulado;
-  });
+  trns.sort((itemA, itemB) => itemB.data.localeCompare(itemA.data)); // Padrão cronológico (Mais novo primeiro)
 
-  trnsBaseBanco.forEach(t => {
-    let passaFiltro = true;
-    if (fCat !== 'todas' && t.categoria !== fCat) passaFiltro = false;
-    if (fTipo !== 'todos' && t.tipo !== fTipo) passaFiltro = false;
-    if (passaFiltro) {
-      const [a, m] = t.data.split('-');
-      const mesAno = `${m}/${a}`;
-      gruposInfo[mesAno].trnsFiltradas.push(t);
-    }
-  });
-
-  const chavesComDados = Object.keys(gruposInfo).filter(k => gruposInfo[k].trnsFiltradas.length > 0);
-  if (chavesComDados.length === 0) {
-    containerSanfona.innerHTML = `<div class="card noprint" style="text-align:center; color:#666; font-size: 15px;">Nenhum registro encontrado para este filtro.</div>`;
+  if (trns.length === 0) {
+    if(containerResumo) containerResumo.innerHTML = "";
+    if(containerArea) containerArea.innerHTML = `<div class="card" style="text-align:center; color:#666; font-size: 15px;">Nenhum registro encontrado para este filtro exato.</div>`;
     return;
   }
 
-  chavesComDados.sort((a, b) => {
-    const [ma, aa] = a.split('/'); const [mb, ab] = b.split('/');
-    return new Date(`${ab}-${mb}-01`) - new Date(`${aa}-${ma}-01`);
+  // Calculando Totalizador Dinâmico
+  let resReceitas = 0;
+  let resDespesas = 0;
+  trns.forEach(t => {
+    if (t.valor >= 0) resReceitas += t.valor;
+    else resDespesas += Math.abs(t.valor);
   });
-
-  const mesesNomes = {'01':'Janeiro', '02':'Fevereiro', '03':'Março', '04':'Abril', '05':'Maio', '06':'Junho', '07':'Julho', '08':'Agosto', '09':'Setembro', '10':'Outubro', '11':'Novembro', '12':'Dezembro'};
+  let resSaldo = resReceitas - resDespesas;
   
-  let htmlS = "";
-  for (let mesAno of chavesComDados) {
-    const [m, a] = mesAno.split('/');
-    const grupo = gruposInfo[mesAno];
-    let trns = grupo.trnsFiltradas;
-    
-    trns.sort((itemA, itemB) => {
-      if (fOrdem === 'data_desc') return itemB.data.localeCompare(itemA.data);
-      if (fOrdem === 'data_asc') return itemA.data.localeCompare(itemB.data);
-      if (fOrdem === 'valor_desc') return Math.abs(itemB.valor) - Math.abs(itemA.valor);
-      if (fOrdem === 'valor_asc') return Math.abs(itemA.valor) - Math.abs(itemB.valor);
-      if (fOrdem === 'az') return itemA.descricao.localeCompare(itemB.descricao);
-      if (fOrdem === 'za') return itemB.descricao.localeCompare(itemA.descricao);
-      return 0;
-    });
-
-    const corFin = grupo.saldoFinal >= 0 ? '#81c784' : '#ef5350';
-    
-    htmlS += `<button class="accordion" style="display: flex; justify-content: space-between; align-items: center;">
-      <div style="font-size: 16px;">${mesesNomes[m]} / ${a}</div>
-      <div style="font-size: 16px; font-weight: normal;">
-        Saldo Atual: <span style="color:${corFin}; font-weight:900;">R$ ${grupo.saldoFinal.toFixed(2)}</span>
+  if(containerResumo) {
+    containerResumo.innerHTML = `
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; background: #F8FAFC; padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
+        <div>
+          <h4 style="margin: 0 0 5px 0; color: #166534; font-size: 13px; text-transform: uppercase;">Entradas do Filtro</h4>
+          <div style="font-size: 20px; font-weight: 900; color: var(--success);">R$ ${resReceitas.toFixed(2)}</div>
+        </div>
+        <div>
+          <h4 style="margin: 0 0 5px 0; color: #991B1B; font-size: 13px; text-transform: uppercase;">Saídas do Filtro</h4>
+          <div style="font-size: 20px; font-weight: 900; color: var(--danger);">R$ ${resDespesas.toFixed(2)}</div>
+        </div>
+        <div style="border-left: 2px solid #E2E8F0; padding-left: 15px;">
+          <h4 style="margin: 0 0 5px 0; color: var(--text-main); font-size: 13px; text-transform: uppercase;">Balanço Líquido</h4>
+          <div style="font-size: 20px; font-weight: 900; color: ${resSaldo >= 0 ? 'var(--success)' : 'var(--danger)'};">R$ ${resSaldo.toFixed(2)}</div>
+        </div>
       </div>
-    </button>
-    <div class="accordion-panel">
-      <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0;">
-        <thead>
-          <tr style="border-bottom: 2px solid #E2E8F0; color: #64748B;">
-            <th style="padding: 12px 5px; text-align:left;">Data</th>
-            <th style="padding: 12px 5px; text-align:left;">Descrição</th>
-            <th style="padding: 12px 5px; text-align:right;">Valor</th>
-            <th style="padding: 12px 5px; text-align:left;">Categoria</th>
-            <th class="noprint" style="padding: 12px 5px; text-align:center;">Ações</th>
-          </tr>
-        </thead>
-        <tbody>`;
-        
-    trns.forEach(t => {
-      const [,mes, dia] = t.data.split('-');
-      const bgCat = t.categoria === 'classificar' ? 'background:#FEF9C3;' : '';
-      
-      htmlS += `<tr style="border-bottom: 1px solid #E2E8F0; ${bgCat}">
-        <td style="padding: 12px 5px; width: 10%; color: #64748B;">${dia}/${mes}</td>
-        <td style="padding: 12px 5px; font-weight: 600; width: 35%;">${t.descricao}</td>
-        <td style="padding: 12px 5px; text-align: right; color: ${t.valor<0 ? 'var(--danger)' : 'var(--success)'}; font-weight: bold;">R$ ${t.valor.toFixed(2)}</td>
-        <td style="padding: 12px 5px; width: 25%;">
-          <select class="noprint" onchange="window.recategorizarInline('${t.id}', this, '${t.categoria}')" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
-            ${getSelectOptions(t.categoria)}
-          </select>
-          <span class="onlyprint">${getCatLabel(t.categoria)}</span>
-        </td>
-        <td class="noprint" style="padding: 12px 5px; text-align: center; width: 15%;">
-          ${t.contaOrigem === 'Manual' ? `<button class="btn-icon" style="color:var(--tab-bg);" onclick="window.abrirModalEdicao('${t.id}')">✏️</button>` : ''}
-          <button class="btn-icon" style="color:var(--danger);" onclick="window.excluirLancamento('${t.id}')">🗑️</button>
-        </td>
-      </tr>`;
-    });
-    htmlS += `</tbody></table></div>`;
+    `;
   }
-  
-  containerSanfona.innerHTML = htmlS;
-  
-  const acc = document.getElementsByClassName("accordion");
-  let openedAccordion = false;
-  
-  for (let i = 0; i < acc.length; i++) {
-    acc[i].onclick = function() {
-      this.classList.toggle("active");
-      const panel = this.nextElementSibling;
-      if (panel.style.maxHeight) panel.style.maxHeight = null;
-      else panel.style.maxHeight = panel.scrollHeight + "px";
-    };
 
-    if (activeMonth && acc[i].querySelector('div').innerText.trim() === activeMonth) {
-      acc[i].click();
-      openedAccordion = true;
-    }
-  }
+  // Tabela Única e Contínua
+  let htmlS = `
+    <table class="table-registros">
+      <thead>
+        <tr>
+          <th style="width: 10%;">Data</th>
+          <th style="width: 40%;">Descrição</th>
+          <th style="text-align:right; width: 15%;">Valor</th>
+          <th style="width: 20%;">Categoria</th>
+          <th class="noprint" style="text-align:center; width: 15%;">Ações</th>
+        </tr>
+      </thead>
+      <tbody>`;
+      
+  trns.forEach(t => {
+    const [,mes, dia] = t.data.split('-');
+    const bgCat = t.categoria === 'classificar' ? 'background:#FEF9C3;' : '';
+    
+    htmlS += `<tr style="${bgCat}">
+      <td style="color: #64748B;">${dia}/${mes}</td>
+      <td style="font-weight: 600;">${t.descricao}</td>
+      <td style="text-align: right; color: ${t.valor<0 ? 'var(--danger)' : 'var(--success)'}; font-weight: bold;">R$ ${t.valor.toFixed(2)}</td>
+      <td>
+        <select class="noprint" onchange="window.recategorizarInline('${t.id}', this, '${t.categoria}')" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; font-size: 12px;">
+          ${getSelectOptions(t.categoria)}
+        </select>
+        <span class="onlyprint">${getCatLabel(t.categoria)}</span>
+      </td>
+      <td class="noprint" style="text-align: center;">
+        ${t.contaOrigem === 'Manual' ? `<button class="btn-icon" style="color:var(--tab-bg); border:none; background:none; cursor:pointer;" onclick="window.abrirModalEdicao('${t.id}')">✏️</button>` : ''}
+        <button class="btn-icon" style="color:var(--danger); border:none; background:none; cursor:pointer;" onclick="window.excluirLancamento('${t.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  });
+  htmlS += `</tbody></table>`;
   
-  if (!openedAccordion && acc.length > 0) acc[0].click();
-  if (appContent) setTimeout(() => { appContent.scrollTop = currentScroll; }, 10);
+  if(containerArea) containerArea.innerHTML = htmlS;
 };
 
 window.salvarExtratoReal = async () => {
@@ -505,7 +476,7 @@ window.salvarExtratoReal = async () => {
       salvas++;
       
       if (selectCat !== 'classificar' && selectCat !== 'transferencia_interna' && selectCat !== 'avulso') {
-        const chave = t.descricao.trim().toUpperCase();
+        const chave = window.limparTextoParaIA(t.descricao); // IA agora limpa a data da base
         if (!window.regras.find(r => r.palavra_chave === chave && r.tipo === t.tipo)) {
           const novaRegra = { id: `REG-${Date.now()}`, palavra_chave: chave, tipo: t.tipo, categoria: selectCat };
           await setDoc(doc(db, "banco_regras", novaRegra.id), novaRegra);
@@ -517,13 +488,11 @@ window.salvarExtratoReal = async () => {
   
   window.mostrarToast(`${salvas} lançamentos salvos!`);
   window.transacoesPendentes = [];
+  window.atualizarFiltroMeses();
   window.renderizarRegistrosSalvos();
   window.renderizarDashboard();
 };
 
-// ==========================================
-// ZONA DE PERIGO COM VALIDAÇÃO DE SENHA
-// ==========================================
 window.apagarTodoOExtrato = () => {
   document.getElementById('acaoDestrutivaAlvo').value = 'extrato';
   document.getElementById('modal-seguranca-texto').innerText = 'Tem a certeza ABSOLUTA que deseja APAGAR TODO O SEU HISTÓRICO FINANCEIRO? (As contas e categorias serão mantidas).';
@@ -541,17 +510,13 @@ window.apagarRegrasIA = () => {
 window.executarAcaoDestrutiva = async () => {
   const pwd = document.getElementById('inputSenhaConfirmacao').value;
   const acao = document.getElementById('acaoDestrutivaAlvo').value;
-  
   if (!pwd) return alert("⚠️ Digite a sua senha de acesso para confirmar a operação.");
-
   const btnConf = document.getElementById('btnConfirmarReset');
   btnConf.innerText = "Aguarde...";
   btnConf.disabled = true;
-
   try {
     window.mostrarToast("Validando segurança...");
     await signInWithEmailAndPassword(auth, auth.currentUser.email, pwd);
-    
     document.getElementById('modal-confirmacao-senha').classList.add('hidden');
     
     if (acao === 'extrato') {
@@ -559,9 +524,9 @@ window.executarAcaoDestrutiva = async () => {
       for (let t of window.transacoes) { await deleteDoc(doc(db, "banco_transacoes", t.id)); }
       window.transacoes = [];
       window.mostrarToast("Sistema financeiro limpo e zerado!");
+      window.atualizarFiltroMeses();
       window.renderizarRegistrosSalvos();
       window.renderizarDashboard();
-      
     } else if (acao === 'ia') {
       window.mostrarToast("Apagando memória da I.A...");
       for (let r of window.regras) { await deleteDoc(doc(db, "banco_regras", r.id)); }
@@ -569,35 +534,27 @@ window.executarAcaoDestrutiva = async () => {
       window.mostrarToast("Memória da Inteligência Artificial limpa com sucesso!");
     }
   } catch (e) {
-    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
-      alert("❌ Senha incorreta. Operação de segurança bloqueada.");
-    } else {
-      alert("Erro ao executar ação: " + e.message);
-    }
+    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') { alert("❌ Senha incorreta. Operação de segurança bloqueada."); } 
+    else { alert("Erro ao executar ação: " + e.message); }
   } finally {
     btnConf.innerText = "Confirmar e Apagar";
     btnConf.disabled = false;
   }
 };
 
-// ==========================================
-// SEGURANÇA E EDIÇÃO COM APRENDIZADO DA IA
-// ==========================================
 window.recategorizarInline = async (id, selectEl, oldCat) => {
   const novaCat = selectEl.value;
   if (!confirm(`Deseja alterar a categoria deste lançamento para "${getCatLabel(novaCat)}"?`)) {
-    selectEl.value = oldCat;
-    return;
+    selectEl.value = oldCat; return;
   }
   
   try {
     await updateDoc(doc(db, "banco_transacoes", id), { categoria: novaCat });
     const t = window.transacoes.find(x => x.id === id);
-    
     if (t) {
       t.categoria = novaCat;
       if (novaCat !== 'classificar' && novaCat !== 'transferencia_interna' && novaCat !== 'avulso') {
-        const chave = t.descricao.trim().toUpperCase();
+        const chave = window.limparTextoParaIA(t.descricao); // IA aprende sem a data grudada
         const regraExiste = window.regras.find(r => r.palavra_chave === chave && r.tipo === t.tipo);
         
         if (regraExiste) {
@@ -610,15 +567,12 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
         }
       }
     }
-    
     window.mostrarToast("Categoria atualizada com sucesso!");
-    
     selectEl.setAttribute('onchange', `window.recategorizarInline('${id}', this, '${novaCat}')`);
     const printSpan = selectEl.nextElementSibling;
     if (printSpan && printSpan.classList.contains('onlyprint')) printSpan.innerText = getCatLabel(novaCat);
     const tr = selectEl.closest('tr');
     if (tr) tr.style.background = (novaCat === 'classificar') ? '#FEF9C3' : 'transparent';
-
     window.renderizarDashboard();
   } catch(e) { alert("Erro ao atualizar."); selectEl.value = oldCat; }
 };
@@ -629,6 +583,7 @@ window.excluirLancamento = async (id) => {
     await deleteDoc(doc(db, "banco_transacoes", id));
     window.transacoes = window.transacoes.filter(t => t.id !== id);
     window.mostrarToast("Lançamento excluído.");
+    window.atualizarFiltroMeses();
     window.renderizarRegistrosSalvos();
     window.renderizarDashboard();
   } catch (e) { alert("Erro ao excluir."); }
@@ -689,14 +644,12 @@ window.adicionarLancamentoAvulso = async () => {
   document.getElementById('avulsoDesc').value = '';
   document.getElementById('avulsoValor').value = '';
   
+  window.atualizarFiltroMeses();
   window.mudarAba('registros');
   window.renderizarRegistrosSalvos();
   window.renderizarDashboard();
 };
 
-// ==========================================
-// DASHBOARD EXECUTIVO
-// ==========================================
 window.renderizarDashboard = () => {
   const container = document.getElementById('painel-dashboard-content');
   if (!container) return;
@@ -722,7 +675,6 @@ window.renderizarDashboard = () => {
       let val = Math.abs(t.valor);
       tDespesas += val;
       bancosResumo[t.contaOrigem].d += val;
-      
       const catName = getCatLabel(t.categoria);
       if (!porCategoria[catName]) porCategoria[catName] = 0;
       porCategoria[catName] += val;
@@ -789,25 +741,13 @@ window.renderizarDashboard = () => {
         type: 'doughnut',
         data: {
           labels: Object.keys(porCategoria),
-          datasets: [{
-            data: Object.values(porCategoria),
-            backgroundColor: coresDistintas,
-            borderWidth: 2,
-            borderColor: '#ffffff'
-          }]
+          datasets: [{ data: Object.values(porCategoria), backgroundColor: coresDistintas, borderWidth: 2, borderColor: '#ffffff' }]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: {
             legend: { position: 'right' },
-            datalabels: {
-              color: '#fff', font: { weight: 'bold', size: 12 },
-              formatter: (value, ctx) => {
-                let sum = 0;
-                ctx.chart.data.datasets[0].data.map(data => { sum += data; });
-                return (value * 100 / sum).toFixed(1) + "%";
-              }
-            }
+            datalabels: { color: '#fff', font: { weight: 'bold', size: 12 }, formatter: (value, ctx) => { let sum = 0; ctx.chart.data.datasets[0].data.map(data => { sum += data; }); return (value * 100 / sum).toFixed(1) + "%"; } }
           }
         }
       });
@@ -900,7 +840,6 @@ window.fazerLogin = async () => {
   const s = document.getElementById('senhaLogin').value;
   
   if (!e || !s) return alert("⚠️ Por favor, preencha o e-mail e a senha antes de entrar.");
-
   const btn = document.getElementById('btnAcesso');
   const txtOriginal = btn.innerText;
   btn.innerText = "Autenticando...";
