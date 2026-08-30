@@ -157,7 +157,7 @@ window.renderizarCategoriasConfig = () => {
 };
 
 // ==========================================
-// IMPORTAÇÃO E CAÇADOR INTELIGENTE
+// IMPORTAÇÃO E CAÇADOR INTELIGENTE (I.A. BIDIMENSIONAL)
 // ==========================================
 function limparMoedaCSV(val) {
   let n = val.toString().replace(/[R\$\s\+]/gi, '').trim();
@@ -203,9 +203,11 @@ window.processarOFX = (ofx, contaId) => {
       let desc = (mm && mm[1]) ? mm[1].trim() : ((nm && nm[1]) ? nm[1].trim() : "");
       if (v === 0) continue;
       
+      const tipoTransacao = v < 0 ? 'despesa' : 'receita';
+      
       window.transacoesPendentes.push({
         id: `TEMP-${Date.now()}-${i}`, data: `${d.substring(0,4)}-${d.substring(4,6)}-${d.substring(6,8)}`,
-        descricao: desc.substring(0,50), valor: v, tipo: v < 0 ? 'despesa' : 'receita', categoria: autoCategorizar(desc), contaOrigem: contaId
+        descricao: desc.substring(0,50), valor: v, tipo: tipoTransacao, categoria: autoCategorizar(desc, tipoTransacao), contaOrigem: contaId
       });
     }
   }
@@ -256,9 +258,11 @@ window.processarCSV = (csv, contaId) => {
         if (p[0].length === 4) { dF = `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`; }
         else { let ano = p[2].length === 2 ? "20" + p[2] : p[2]; dF = `${ano}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`; }
         
+        const tipoTransacao = valor < 0 ? 'despesa' : 'receita';
+
         window.transacoesPendentes.push({
           id: `TEMP-${Date.now()}-${i}`, data: dF, descricao: desc.substring(0,50),
-          valor: valor, tipo: valor < 0 ? 'despesa' : 'receita', categoria: autoCategorizar(desc), contaOrigem: contaId
+          valor: valor, tipo: tipoTransacao, categoria: autoCategorizar(desc, tipoTransacao), contaOrigem: contaId
         });
       }
     });
@@ -266,10 +270,13 @@ window.processarCSV = (csv, contaId) => {
   }});
 };
 
-function autoCategorizar(desc) {
+// Nova I.A. Bidimensional: Busca a palavra-chave ATRELADA ao tipo (receita ou despesa)
+function autoCategorizar(desc, tipoTransacao) {
   if(!desc) return 'classificar';
   const dUpper = desc.toUpperCase();
-  for (let r of window.regras) { if (dUpper.includes(r.palavra_chave)) return r.categoria; }
+  for (let r of window.regras) { 
+    if (dUpper.includes(r.palavra_chave) && r.tipo === tipoTransacao) return r.categoria; 
+  }
   return 'classificar';
 }
 
@@ -281,14 +288,13 @@ function finalizarImportacao() {
 }
 
 // ==========================================
-// REGISTROS E FILTROS (COM MEMÓRIA DE ESTADO)
+// REGISTROS E FILTROS
 // ==========================================
 window.renderizarRegistrosSalvos = () => {
   const containerSanfona = document.getElementById('area-sanfonas');
   const containerPend = document.getElementById('area-pendentes');
   const appContent = document.getElementById('app-content');
   
-  // 1. Memorizar estado atual para não quebrar a navegação do usuário
   let activeMonth = null;
   if (containerSanfona) {
     const activeAcc = containerSanfona.querySelector('.accordion.active');
@@ -439,23 +445,14 @@ window.renderizarRegistrosSalvos = () => {
       else panel.style.maxHeight = panel.scrollHeight + "px";
     };
 
-    // Restaura a sanfona que o usuário estava visualizando antes
-    const thisMonthText = acc[i].querySelector('div').innerText.trim();
-    if (activeMonth && thisMonthText === activeMonth) {
+    if (activeMonth && acc[i].querySelector('div').innerText.trim() === activeMonth) {
       acc[i].click();
       openedAccordion = true;
     }
   }
   
-  // Se não abriu nenhuma sanfona de memória, abre a primeira por padrão
-  if (!openedAccordion && acc.length > 0) {
-    acc[0].click();
-  }
-
-  // 2. Restaurar o scroll (com atraso leve para a sanfona ganhar altura)
-  if (appContent) {
-    setTimeout(() => { appContent.scrollTop = currentScroll; }, 10);
-  }
+  if (!openedAccordion && acc.length > 0) acc[0].click();
+  if (appContent) setTimeout(() => { appContent.scrollTop = currentScroll; }, 10);
 };
 
 window.salvarExtratoReal = async () => {
@@ -478,8 +475,9 @@ window.salvarExtratoReal = async () => {
       
       if (selectCat !== 'classificar' && selectCat !== 'transferencia_interna' && selectCat !== 'avulso') {
         const chave = t.descricao.trim().toUpperCase();
-        if (!window.regras.find(r => r.palavra_chave === chave)) {
-          const novaRegra = { id: `REG-${Date.now()}`, palavra_chave: chave, categoria: selectCat };
+        // A I.A. grava a regra especificando também o TIPO da transação
+        if (!window.regras.find(r => r.palavra_chave === chave && r.tipo === t.tipo)) {
+          const novaRegra = { id: `REG-${Date.now()}`, palavra_chave: chave, tipo: t.tipo, categoria: selectCat };
           await setDoc(doc(db, "banco_regras", novaRegra.id), novaRegra);
           window.regras.push(novaRegra);
         }
@@ -553,7 +551,7 @@ window.executarAcaoDestrutiva = async () => {
 };
 
 // ==========================================
-// SEGURANÇA E EDIÇÃO CIRÚRGICA (SEM RECARREGAR A TELA INTEIRA)
+// SEGURANÇA E EDIÇÃO CIRÚRGICA COM IA BIDIMENSIONAL
 // ==========================================
 window.recategorizarInline = async (id, selectEl, oldCat) => {
   const novaCat = selectEl.value;
@@ -568,16 +566,16 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
     
     if (t) {
       t.categoria = novaCat;
-      // IA Reaprende a correção
+      // IA Bidimensional Reaprende a correção considerando o TIPO (receita/despesa)
       if (novaCat !== 'classificar' && novaCat !== 'transferencia_interna' && novaCat !== 'avulso') {
         const chave = t.descricao.trim().toUpperCase();
-        const regraExiste = window.regras.find(r => r.palavra_chave === chave);
+        const regraExiste = window.regras.find(r => r.palavra_chave === chave && r.tipo === t.tipo);
         
         if (regraExiste) {
           await updateDoc(doc(db, "banco_regras", regraExiste.id), { categoria: novaCat });
           regraExiste.categoria = novaCat;
         } else {
-          const novaRegra = { id: `REG-${Date.now()}`, palavra_chave: chave, categoria: novaCat };
+          const novaRegra = { id: `REG-${Date.now()}`, palavra_chave: chave, tipo: t.tipo, categoria: novaCat };
           await setDoc(doc(db, "banco_regras", novaRegra.id), novaRegra);
           window.regras.push(novaRegra);
         }
@@ -586,22 +584,13 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
     
     window.mostrarToast("Categoria atualizada com sucesso!");
     
-    // Atualização Visual Cirúrgica no DOM (Evita flash e perda de scroll)
     selectEl.setAttribute('onchange', `window.recategorizarInline('${id}', this, '${novaCat}')`);
-    
     const printSpan = selectEl.nextElementSibling;
-    if (printSpan && printSpan.classList.contains('onlyprint')) {
-        printSpan.innerText = getCatLabel(novaCat);
-    }
-    
+    if (printSpan && printSpan.classList.contains('onlyprint')) printSpan.innerText = getCatLabel(novaCat);
     const tr = selectEl.closest('tr');
-    if (tr) {
-        tr.style.background = (novaCat === 'classificar') ? '#FEF9C3' : 'transparent';
-    }
+    if (tr) tr.style.background = (novaCat === 'classificar') ? '#FEF9C3' : 'transparent';
 
-    // Atualiza o Dashboard silenciosamente em background
     window.renderizarDashboard();
-
   } catch(e) { alert("Erro ao atualizar."); selectEl.value = oldCat; }
 };
 
