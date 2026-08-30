@@ -35,7 +35,6 @@ const CATEGORIAS_PADRAO = [
   {v: 'avulso', l: '🏛️ Saldo Inicial'}
 ];
 
-// O CÉREBRO DA IA ABSTRATA: Remove datas residuais e prefixos bancários
 window.limparTextoParaIA = (texto) => {
   if (!texto) return "";
   let limpo = texto.toUpperCase();
@@ -46,23 +45,6 @@ window.limparTextoParaIA = (texto) => {
   limpo = limpo.replace(/\b\d{5,}\b/g, ''); 
   limpo = limpo.replace(/[-/]/g, ' ').replace(/\s+/g, ' ').trim();
   return limpo;
-};
-
-window.atualizarFiltroMeses = () => {
-  const sel = document.getElementById('filtroMes');
-  if (!sel) return;
-  const valAtual = sel.value;
-  const meses = new Set();
-  window.transacoes.forEach(t => {
-    const [y, m] = t.data.split('-');
-    meses.add(`${m}/${y}`);
-  });
-  const mesesArr = Array.from(meses).sort((a,b) => {
-    const [ma, ya] = a.split('/'); const [mb, yb] = b.split('/');
-    return new Date(`${yb}-${mb}-01`) - new Date(`${ya}-${ma}-01`);
-  });
-  sel.innerHTML = '<option value="todos">Todos os Meses / Período Completo</option>' + mesesArr.map(m => `<option value="${m}">${m}</option>`).join('');
-  if (mesesArr.includes(valAtual)) sel.value = valAtual;
 };
 
 window.carregarTodosOsDados = async () => {
@@ -79,7 +61,6 @@ window.carregarTodosOsDados = async () => {
     window.transacoes = snapTransacoes.docs.map(d => d.data());
     window.categoriasExtras = snapCats.docs.map(d => d.data());
     
-    window.atualizarFiltroMeses();
     window.renderizarContas();
     window.renderizarDropdownContas();
     window.renderizarCategoriasConfig();
@@ -333,11 +314,14 @@ function finalizarImportacao() {
   } else alert("Nenhuma transação válida encontrada.");
 }
 
-// A NOVA ABA DE REGISTROS (TABELA ÚNICA + TOTALIZADOR)
+// A NOVA ABA DE REGISTROS (TABELA ÚNICA + TOTALIZADOR + FILTROS DINÂMICOS)
 window.renderizarRegistrosSalvos = () => {
   const containerArea = document.getElementById('area-registros-filtrados');
   const containerResumo = document.getElementById('painel-resumo-filtros');
   const containerPend = document.getElementById('area-pendentes');
+  const appContent = document.getElementById('app-content');
+  
+  const currentScroll = appContent ? appContent.scrollTop : 0;
   
   if (window.transacoesPendentes.length > 0) {
     let htmlP = `<div class="noprint" style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; margin-bottom:20px;">
@@ -360,7 +344,9 @@ window.renderizarRegistrosSalvos = () => {
     if(containerPend) containerPend.innerHTML = htmlP;
   } else { if(containerPend) containerPend.innerHTML = ""; }
 
-  const fMes = document.getElementById('filtroMes') ? document.getElementById('filtroMes').value : 'todos';
+  // Captura dos novos filtros dinâmicos
+  const fDataInicio = document.getElementById('filtroDataInicio') ? document.getElementById('filtroDataInicio').value : '';
+  const fDataFim = document.getElementById('filtroDataFim') ? document.getElementById('filtroDataFim').value : '';
   const fConta = document.getElementById('filtroConta') ? document.getElementById('filtroConta').value : 'todas';
   const fCat = document.getElementById('filtroCategoria') ? document.getElementById('filtroCategoria').value : 'todas';
   const fTipo = document.getElementById('filtroTipo') ? document.getElementById('filtroTipo').value : 'todos';
@@ -368,12 +354,8 @@ window.renderizarRegistrosSalvos = () => {
 
   let trns = [...window.transacoes];
   
-  if (fMes !== 'todos') {
-    trns = trns.filter(t => {
-      const [y, m] = t.data.split('-');
-      return `${m}/${y}` === fMes;
-    });
-  }
+  if (fDataInicio) trns = trns.filter(t => t.data >= fDataInicio);
+  if (fDataFim) trns = trns.filter(t => t.data <= fDataFim);
   if (fConta !== 'todas') trns = trns.filter(t => t.contaOrigem === fConta);
   if (fCat !== 'todas') trns = trns.filter(t => t.categoria === fCat);
   if (fTipo !== 'todos') trns = trns.filter(t => t.tipo === fTipo);
@@ -382,7 +364,7 @@ window.renderizarRegistrosSalvos = () => {
     trns = trns.filter(t => t.descricao.toLowerCase().includes(txt) || Math.abs(t.valor).toString().includes(txt));
   }
   
-  trns.sort((itemA, itemB) => itemB.data.localeCompare(itemA.data)); // Padrão cronológico (Mais novo primeiro)
+  trns.sort((itemA, itemB) => itemB.data.localeCompare(itemA.data));
 
   if (trns.length === 0) {
     if(containerResumo) containerResumo.innerHTML = "";
@@ -390,7 +372,6 @@ window.renderizarRegistrosSalvos = () => {
     return;
   }
 
-  // Calculando Totalizador Dinâmico
   let resReceitas = 0;
   let resDespesas = 0;
   trns.forEach(t => {
@@ -418,7 +399,6 @@ window.renderizarRegistrosSalvos = () => {
     `;
   }
 
-  // Tabela Única e Contínua
   let htmlS = `
     <table class="table-registros">
       <thead>
@@ -455,6 +435,7 @@ window.renderizarRegistrosSalvos = () => {
   htmlS += `</tbody></table>`;
   
   if(containerArea) containerArea.innerHTML = htmlS;
+  if (appContent) setTimeout(() => { appContent.scrollTop = currentScroll; }, 10);
 };
 
 window.salvarExtratoReal = async () => {
@@ -476,7 +457,7 @@ window.salvarExtratoReal = async () => {
       salvas++;
       
       if (selectCat !== 'classificar' && selectCat !== 'transferencia_interna' && selectCat !== 'avulso') {
-        const chave = window.limparTextoParaIA(t.descricao); // IA agora limpa a data da base
+        const chave = window.limparTextoParaIA(t.descricao);
         if (!window.regras.find(r => r.palavra_chave === chave && r.tipo === t.tipo)) {
           const novaRegra = { id: `REG-${Date.now()}`, palavra_chave: chave, tipo: t.tipo, categoria: selectCat };
           await setDoc(doc(db, "banco_regras", novaRegra.id), novaRegra);
@@ -488,7 +469,6 @@ window.salvarExtratoReal = async () => {
   
   window.mostrarToast(`${salvas} lançamentos salvos!`);
   window.transacoesPendentes = [];
-  window.atualizarFiltroMeses();
   window.renderizarRegistrosSalvos();
   window.renderizarDashboard();
 };
@@ -524,7 +504,6 @@ window.executarAcaoDestrutiva = async () => {
       for (let t of window.transacoes) { await deleteDoc(doc(db, "banco_transacoes", t.id)); }
       window.transacoes = [];
       window.mostrarToast("Sistema financeiro limpo e zerado!");
-      window.atualizarFiltroMeses();
       window.renderizarRegistrosSalvos();
       window.renderizarDashboard();
     } else if (acao === 'ia') {
@@ -554,7 +533,7 @@ window.recategorizarInline = async (id, selectEl, oldCat) => {
     if (t) {
       t.categoria = novaCat;
       if (novaCat !== 'classificar' && novaCat !== 'transferencia_interna' && novaCat !== 'avulso') {
-        const chave = window.limparTextoParaIA(t.descricao); // IA aprende sem a data grudada
+        const chave = window.limparTextoParaIA(t.descricao);
         const regraExiste = window.regras.find(r => r.palavra_chave === chave && r.tipo === t.tipo);
         
         if (regraExiste) {
@@ -583,7 +562,6 @@ window.excluirLancamento = async (id) => {
     await deleteDoc(doc(db, "banco_transacoes", id));
     window.transacoes = window.transacoes.filter(t => t.id !== id);
     window.mostrarToast("Lançamento excluído.");
-    window.atualizarFiltroMeses();
     window.renderizarRegistrosSalvos();
     window.renderizarDashboard();
   } catch (e) { alert("Erro ao excluir."); }
@@ -644,7 +622,6 @@ window.adicionarLancamentoAvulso = async () => {
   document.getElementById('avulsoDesc').value = '';
   document.getElementById('avulsoValor').value = '';
   
-  window.atualizarFiltroMeses();
   window.mudarAba('registros');
   window.renderizarRegistrosSalvos();
   window.renderizarDashboard();
