@@ -39,7 +39,10 @@
         <h1>COST SAVINGS ANALYSIS M&R</h1>
         <p>Análise Financeira Corporativa</p>
       </div>
-      <button class="btn-header-home" onclick="window.mudarAba('home')">Voltar ao Início</button>
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <button id="btn-privacy" onclick="window.togglePrivacy()" style="background:none; border:none; font-size:22px; cursor:pointer; padding:5px; filter: grayscale(100%);">👁️</button>
+        <button class="btn-header-home" onclick="window.mudarAba('home')">Voltar ao Início</button>
+      </div>
     </header>
 
     <nav class="tab-bar" id="app-tabs">
@@ -116,7 +119,6 @@
               </select>
             </div>
 
-            <!-- Bloco Mês Fechado -->
             <div class="input-group" id="blocoFiltroMes">
               <label>Mês / Ano:</label>
               <select id="filtroMes" onchange="window.renderizarRegistrosSalvos()">
@@ -124,7 +126,6 @@
               </select>
             </div>
 
-            <!-- Bloco Período Livre (Oculto por padrão) -->
             <div class="input-group hidden" id="blocoFiltroDataInicio">
               <label>Data Inicial:</label>
               <input type="date" id="filtroDataInicio" onchange="window.renderizarRegistrosSalvos()">
