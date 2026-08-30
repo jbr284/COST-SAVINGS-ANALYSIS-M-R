@@ -47,7 +47,6 @@ window.limparTextoParaIA = (texto) => {
   return limpo;
 };
 
-// Alterna a interface visual entre Fatura Mensal e Período Livre
 window.alternarModoPeriodo = () => {
   const modo = document.getElementById('modoPeriodo').value;
   const bMes = document.getElementById('blocoFiltroMes');
@@ -351,10 +350,14 @@ function finalizarImportacao() {
   } else alert("Nenhuma transação válida encontrada.");
 }
 
+// A NOVA ABA DE REGISTROS (COM COLUNA BANCO E BOTÃO EDITAR LIBERADO)
 window.renderizarRegistrosSalvos = () => {
   const containerArea = document.getElementById('area-registros-filtrados');
   const containerResumo = document.getElementById('painel-resumo-filtros');
   const containerPend = document.getElementById('area-pendentes');
+  const appContent = document.getElementById('app-content');
+  
+  const currentScroll = appContent ? appContent.scrollTop : 0;
   
   if (window.transacoesPendentes.length > 0) {
     let htmlP = `<div class="noprint" style="background: #fff3e0; border: 2px solid #f57c00; border-radius: 8px; padding: 15px; margin-bottom:20px;">
@@ -385,7 +388,6 @@ window.renderizarRegistrosSalvos = () => {
 
   let trns = [...window.transacoes];
   
-  // O NOVO FILTRO DUAL (MÊS FECHADO OU PERÍODO LIVRE)
   if (modoPeriodo === 'mes') {
     const fMes = document.getElementById('filtroMes') ? document.getElementById('filtroMes').value : 'todos';
     if (fMes !== 'todos') {
@@ -444,17 +446,18 @@ window.renderizarRegistrosSalvos = () => {
     `;
   }
 
-  // Tabela de Registros com Container de Scroll (Cabeçalho Fixo feito via CSS)
+  // Tabela com a nova coluna "Banco" adicionada
   let htmlS = `
     <div class="table-container">
       <table class="table-registros">
         <thead>
           <tr>
-            <th style="width: 10%;">Data</th>
-            <th style="width: 40%;">Descrição</th>
+            <th style="width: 8%;">Data</th>
+            <th style="width: 12%;">Banco</th>
+            <th style="width: 35%;">Descrição</th>
             <th style="text-align:right; width: 15%;">Valor</th>
             <th style="width: 20%;">Categoria</th>
-            <th class="noprint" style="text-align:center; width: 15%;">Ações</th>
+            <th class="noprint" style="text-align:center; width: 10%;">Ações</th>
           </tr>
         </thead>
         <tbody>`;
@@ -463,8 +466,16 @@ window.renderizarRegistrosSalvos = () => {
     const [,mes, dia] = t.data.split('-');
     const bgCat = t.categoria === 'classificar' ? 'background:#FEF9C3;' : '';
     
+    // Mapeamento dinâmico para pegar o nome do banco
+    let nomeBanco = "Manual";
+    if (t.contaOrigem !== 'Manual') {
+      const contaEncontrada = window.contas.find(c => c.id === t.contaOrigem);
+      if (contaEncontrada) nomeBanco = contaEncontrada.banco;
+    }
+    
     htmlS += `<tr style="${bgCat}">
       <td style="color: #64748B;">${dia}/${mes}</td>
+      <td style="font-weight: 700; color: var(--tab-bg); font-size: 11px; text-transform: uppercase;">${nomeBanco}</td>
       <td style="font-weight: 600;">${t.descricao}</td>
       <td style="text-align: right; color: ${t.valor<0 ? 'var(--danger)' : 'var(--success)'}; font-weight: bold;">R$ ${t.valor.toFixed(2)}</td>
       <td>
@@ -473,8 +484,9 @@ window.renderizarRegistrosSalvos = () => {
         </select>
         <span class="onlyprint">${getCatLabel(t.categoria)}</span>
       </td>
-      <td class="noprint" style="text-align: center;">
-        ${t.contaOrigem === 'Manual' ? `<button class="btn-icon" style="color:var(--tab-bg); border:none; background:none; cursor:pointer;" onclick="window.abrirModalEdicao('${t.id}')">✏️</button>` : ''}
+      <td class="noprint" style="text-align: center; white-space: nowrap;">
+        <!-- Botão Editar agora está liberado para TODAS as transações -->
+        <button class="btn-icon" style="color:var(--tab-bg); border:none; background:none; cursor:pointer;" onclick="window.abrirModalEdicao('${t.id}')">✏️</button>
         <button class="btn-icon" style="color:var(--danger); border:none; background:none; cursor:pointer;" onclick="window.excluirLancamento('${t.id}')">🗑️</button>
       </td>
     </tr>`;
@@ -482,6 +494,7 @@ window.renderizarRegistrosSalvos = () => {
   htmlS += `</tbody></table></div>`;
   
   if(containerArea) containerArea.innerHTML = htmlS;
+  if (appContent) setTimeout(() => { appContent.scrollTop = currentScroll; }, 10);
 };
 
 window.salvarExtratoReal = async () => {
