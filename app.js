@@ -35,7 +35,6 @@ const CATEGORIAS_PADRAO = [
   {v: 'avulso', l: '🏛️ Saldo Inicial'}
 ];
 
-// FUNÇÃO DO MODO PRIVACIDADE (OLHO)
 window.togglePrivacy = () => {
   const body = document.body;
   body.classList.toggle('privacy-mode');
@@ -45,7 +44,6 @@ window.togglePrivacy = () => {
   } else {
     btn.innerText = '👁️';
   }
-  // Atualiza o gráfico para substituir valores por bolinhas se necessário
   if (chartInstance) chartInstance.update();
 };
 
@@ -755,6 +753,23 @@ window.renderizarDashboard = () => {
     </div>`;
   }
   htmlBancos += `</div></div>`;
+
+  let catArray = Object.keys(porCategoria).map(k => ({ nome: k, valor: porCategoria[k] }));
+  catArray.sort((a,b) => b.valor - a.valor);
+  
+  let totalDespesasGrafico = catArray.reduce((acc, curr) => acc + curr.valor, 0);
+  let chartHeight = Math.max(350, catArray.length * 45); 
+  
+  let htmlTabelaPercentual = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 25px; border-top: 1px solid var(--border-color); padding-top: 25px;">`;
+  catArray.forEach(c => {
+    let perc = totalDespesasGrafico > 0 ? ((c.valor / totalDespesasGrafico) * 100).toFixed(1) : 0;
+    htmlTabelaPercentual += `
+      <div style="display: flex; justify-content: space-between; align-items: center; background: #F8FAFC; padding: 12px 15px; border-radius: 6px; border: 1px solid #E2E8F0;">
+        <span style="font-size: 12px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 10px;">${c.nome}</span>
+        <span class="ocultar-valor" style="font-size: 14px; font-weight: 900; color: var(--tab-bg);">${perc}%</span>
+      </div>`;
+  });
+  htmlTabelaPercentual += `</div>`;
   
   container.innerHTML = `
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
@@ -774,7 +789,8 @@ window.renderizarDashboard = () => {
     ${htmlBancos}
     <div style="margin-top: 30px;">
       <h4 style="color: var(--tab-bg); margin-top: 0; margin-bottom: 20px; text-align: center;">Divisão de Custos (Despesas)</h4>
-      <div style="position: relative; height: 400px; width: 100%;"><canvas id="graficoCat"></canvas></div>
+      <div style="position: relative; height: ${chartHeight}px; width: 100%;"><canvas id="graficoCat"></canvas></div>
+      ${htmlTabelaPercentual}
     </div>
   `;
   
@@ -786,10 +802,6 @@ window.renderizarDashboard = () => {
       Chart.register(ChartDataLabels);
       if (chartInstance) chartInstance.destroy();
       
-      // Preparando os dados para o gráfico de barras horizontais ordenado
-      let catArray = Object.keys(porCategoria).map(k => ({ nome: k, valor: porCategoria[k] }));
-      catArray.sort((a,b) => b.valor - a.valor);
-      
       chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -798,16 +810,18 @@ window.renderizarDashboard = () => {
             data: catArray.map(c => c.valor),
             backgroundColor: coresDistintas,
             borderWidth: 1,
-            borderRadius: 4
+            borderRadius: 4,
+            barPercentage: 0.7,
+            categoryPercentage: 0.9
           }]
         },
         options: {
-          indexAxis: 'y', // Isso transforma o gráfico em horizontal
+          indexAxis: 'y',
           responsive: true, 
           maintainAspectRatio: false,
-          layout: { padding: { right: 80 } }, // Espaço para não cortar os valores à direita
+          layout: { padding: { right: 80 } },
           plugins: {
-            legend: { display: false }, // Esconde a legenda (desnecessária no gráfico de barras)
+            legend: { display: false },
             datalabels: { 
               color: '#475569', 
               anchor: 'end',
