@@ -35,6 +35,20 @@ const CATEGORIAS_PADRAO = [
   {v: 'avulso', l: '🏛️ Saldo Inicial'}
 ];
 
+// FUNÇÃO DO MODO PRIVACIDADE (OLHO)
+window.togglePrivacy = () => {
+  const body = document.body;
+  body.classList.toggle('privacy-mode');
+  const btn = document.getElementById('btn-privacy');
+  if (body.classList.contains('privacy-mode')) {
+    btn.innerText = '🙈';
+  } else {
+    btn.innerText = '👁️';
+  }
+  // Atualiza o gráfico para substituir valores por bolinhas se necessário
+  if (chartInstance) chartInstance.update();
+};
+
 window.limparTextoParaIA = (texto) => {
   if (!texto) return "";
   let limpo = texto.toUpperCase();
@@ -350,7 +364,6 @@ function finalizarImportacao() {
   } else alert("Nenhuma transação válida encontrada.");
 }
 
-// A NOVA ABA DE REGISTROS (COM COLUNA BANCO E BOTÃO EDITAR LIBERADO)
 window.renderizarRegistrosSalvos = () => {
   const containerArea = document.getElementById('area-registros-filtrados');
   const containerResumo = document.getElementById('painel-resumo-filtros');
@@ -370,7 +383,7 @@ window.renderizarRegistrosSalvos = () => {
       htmlP += `<tr data-id="${t.id}">
         <td>${d}/${m}</td>
         <td style="font-weight:bold;">${t.descricao}</td>
-        <td style="text-align:right; color:${t.valor<0?'#c62828':'#2e7d32'};">R$ ${t.valor.toFixed(2)}</td>
+        <td style="text-align:right; color:${t.valor<0?'#c62828':'#2e7d32'};"><span class="ocultar-valor">R$ ${t.valor.toFixed(2)}</span></td>
         <td><select class="select-categoria" style="padding: 6px; width:100%; border-radius:4px; border:1px solid #ccc;">${getSelectOptions(t.categoria)}</select></td>
       </tr>`;
     });
@@ -432,21 +445,20 @@ window.renderizarRegistrosSalvos = () => {
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; background: #F8FAFC; padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
         <div>
           <h4 style="margin: 0 0 5px 0; color: #166534; font-size: 13px; text-transform: uppercase;">Entradas do Filtro</h4>
-          <div style="font-size: 20px; font-weight: 900; color: var(--success);">R$ ${resReceitas.toFixed(2)}</div>
+          <div class="ocultar-valor" style="font-size: 20px; font-weight: 900; color: var(--success);">R$ ${resReceitas.toFixed(2)}</div>
         </div>
         <div>
           <h4 style="margin: 0 0 5px 0; color: #991B1B; font-size: 13px; text-transform: uppercase;">Saídas do Filtro</h4>
-          <div style="font-size: 20px; font-weight: 900; color: var(--danger);">R$ ${resDespesas.toFixed(2)}</div>
+          <div class="ocultar-valor" style="font-size: 20px; font-weight: 900; color: var(--danger);">R$ ${resDespesas.toFixed(2)}</div>
         </div>
         <div style="border-left: 2px solid #E2E8F0; padding-left: 15px;">
           <h4 style="margin: 0 0 5px 0; color: var(--text-main); font-size: 13px; text-transform: uppercase;">Balanço Líquido</h4>
-          <div style="font-size: 20px; font-weight: 900; color: ${resSaldo >= 0 ? 'var(--success)' : 'var(--danger)'};">R$ ${resSaldo.toFixed(2)}</div>
+          <div class="ocultar-valor" style="font-size: 20px; font-weight: 900; color: ${resSaldo >= 0 ? 'var(--success)' : 'var(--danger)'};">R$ ${resSaldo.toFixed(2)}</div>
         </div>
       </div>
     `;
   }
 
-  // Tabela com a nova coluna "Banco" adicionada
   let htmlS = `
     <div class="table-container">
       <table class="table-registros">
@@ -465,8 +477,6 @@ window.renderizarRegistrosSalvos = () => {
   trns.forEach(t => {
     const [,mes, dia] = t.data.split('-');
     const bgCat = t.categoria === 'classificar' ? 'background:#FEF9C3;' : '';
-    
-    // Mapeamento dinâmico para pegar o nome do banco
     let nomeBanco = "Manual";
     if (t.contaOrigem !== 'Manual') {
       const contaEncontrada = window.contas.find(c => c.id === t.contaOrigem);
@@ -477,7 +487,7 @@ window.renderizarRegistrosSalvos = () => {
       <td style="color: #64748B;">${dia}/${mes}</td>
       <td style="font-weight: 700; color: var(--tab-bg); font-size: 11px; text-transform: uppercase;">${nomeBanco}</td>
       <td style="font-weight: 600;">${t.descricao}</td>
-      <td style="text-align: right; color: ${t.valor<0 ? 'var(--danger)' : 'var(--success)'}; font-weight: bold;">R$ ${t.valor.toFixed(2)}</td>
+      <td style="text-align: right; color: ${t.valor<0 ? 'var(--danger)' : 'var(--success)'}; font-weight: bold;"><span class="ocultar-valor">R$ ${t.valor.toFixed(2)}</span></td>
       <td>
         <select class="noprint" onchange="window.recategorizarInline('${t.id}', this, '${t.categoria}')" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; font-size: 12px;">
           ${getSelectOptions(t.categoria)}
@@ -485,7 +495,6 @@ window.renderizarRegistrosSalvos = () => {
         <span class="onlyprint">${getCatLabel(t.categoria)}</span>
       </td>
       <td class="noprint" style="text-align: center; white-space: nowrap;">
-        <!-- Botão Editar agora está liberado para TODAS as transações -->
         <button class="btn-icon" style="color:var(--tab-bg); border:none; background:none; cursor:pointer;" onclick="window.abrirModalEdicao('${t.id}')">✏️</button>
         <button class="btn-icon" style="color:var(--danger); border:none; background:none; cursor:pointer;" onclick="window.excluirLancamento('${t.id}')">🗑️</button>
       </td>
@@ -738,10 +747,10 @@ window.renderizarDashboard = () => {
     
     htmlBancos += `<div style="background: #F8FAFC; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
       <div style="font-weight: 800; color: var(--text-main); font-size: 14px; margin-bottom: 12px;">${nBanco}</div>
-      <div style="font-size: 13px; color: var(--success); display: flex; justify-content: space-between;"><span>Entradas:</span> <span>R$ ${bancosResumo[bId].r.toFixed(2)}</span></div>
-      <div style="font-size: 13px; color: var(--danger); display: flex; justify-content: space-between; margin-bottom: 10px;"><span>Saídas:</span> <span>R$ ${bancosResumo[bId].d.toFixed(2)}</span></div>
+      <div style="font-size: 13px; color: var(--success); display: flex; justify-content: space-between;"><span>Entradas:</span> <span class="ocultar-valor">R$ ${bancosResumo[bId].r.toFixed(2)}</span></div>
+      <div style="font-size: 13px; color: var(--danger); display: flex; justify-content: space-between; margin-bottom: 10px;"><span>Saídas:</span> <span class="ocultar-valor">R$ ${bancosResumo[bId].d.toFixed(2)}</span></div>
       <div style="font-size: 14px; color: ${bS>=0?'var(--success)':'var(--danger)'}; display: flex; justify-content: space-between; font-weight: bold; border-top: 1px solid #E2E8F0; padding-top: 8px;">
-        <span>Saldo:</span> <span>R$ ${bS.toFixed(2)}</span>
+        <span>Saldo:</span> <span class="ocultar-valor">R$ ${bS.toFixed(2)}</span>
       </div>
     </div>`;
   }
@@ -751,21 +760,21 @@ window.renderizarDashboard = () => {
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
       <div style="background: #F0FDF4; padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #BBF7D0;">
         <h4 style="margin: 0 0 5px 0; color: #166534; font-size: 12px;">RECEITA TOTAL</h4>
-        <div style="font-size: 22px; font-weight: 900; color: var(--success);">R$ ${tReceitas.toFixed(2)}</div>
+        <div class="ocultar-valor" style="font-size: 22px; font-weight: 900; color: var(--success);">R$ ${tReceitas.toFixed(2)}</div>
       </div>
       <div style="background: #FEF2F2; padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #FECACA;">
         <h4 style="margin: 0 0 5px 0; color: #991B1B; font-size: 12px;">DESPESA TOTAL</h4>
-        <div style="font-size: 22px; font-weight: 900; color: var(--danger);">R$ ${tDespesas.toFixed(2)}</div>
+        <div class="ocultar-valor" style="font-size: 22px; font-weight: 900; color: var(--danger);">R$ ${tDespesas.toFixed(2)}</div>
       </div>
       <div style="background: ${balanco>=0?'#F0FDF4':'#FEF2F2'}; padding: 20px; border-radius: 8px; text-align: center; border: 1px solid ${balanco>=0?'#BBF7D0':'#FECACA'};">
         <h4 style="margin: 0 0 5px 0; color: ${balanco>=0?'#166534':'#991B1B'}; font-size: 12px;">SALDO LÍQUIDO</h4>
-        <div style="font-size: 22px; font-weight: 900; color: ${corB};">R$ ${balanco.toFixed(2)}</div>
+        <div class="ocultar-valor" style="font-size: 22px; font-weight: 900; color: ${corB};">R$ ${balanco.toFixed(2)}</div>
       </div>
     </div>
     ${htmlBancos}
     <div style="margin-top: 30px;">
       <h4 style="color: var(--tab-bg); margin-top: 0; margin-bottom: 20px; text-align: center;">Divisão de Custos (Despesas)</h4>
-      <div style="position: relative; height: 350px; width: 100%;"><canvas id="graficoCat"></canvas></div>
+      <div style="position: relative; height: 400px; width: 100%;"><canvas id="graficoCat"></canvas></div>
     </div>
   `;
   
@@ -777,17 +786,42 @@ window.renderizarDashboard = () => {
       Chart.register(ChartDataLabels);
       if (chartInstance) chartInstance.destroy();
       
+      // Preparando os dados para o gráfico de barras horizontais ordenado
+      let catArray = Object.keys(porCategoria).map(k => ({ nome: k, valor: porCategoria[k] }));
+      catArray.sort((a,b) => b.valor - a.valor);
+      
       chartInstance = new Chart(ctx, {
-        type: 'doughnut',
+        type: 'bar',
         data: {
-          labels: Object.keys(porCategoria),
-          datasets: [{ data: Object.values(porCategoria), backgroundColor: coresDistintas, borderWidth: 2, borderColor: '#ffffff' }]
+          labels: catArray.map(c => c.nome),
+          datasets: [{
+            data: catArray.map(c => c.valor),
+            backgroundColor: coresDistintas,
+            borderWidth: 1,
+            borderRadius: 4
+          }]
         },
         options: {
-          responsive: true, maintainAspectRatio: false,
+          indexAxis: 'y', // Isso transforma o gráfico em horizontal
+          responsive: true, 
+          maintainAspectRatio: false,
+          layout: { padding: { right: 80 } }, // Espaço para não cortar os valores à direita
           plugins: {
-            legend: { position: 'right' },
-            datalabels: { color: '#fff', font: { weight: 'bold', size: 12 }, formatter: (value, ctx) => { let sum = 0; ctx.chart.data.datasets[0].data.map(data => { sum += data; }); return (value * 100 / sum).toFixed(1) + "%"; } }
+            legend: { display: false }, // Esconde a legenda (desnecessária no gráfico de barras)
+            datalabels: { 
+              color: '#475569', 
+              anchor: 'end',
+              align: 'end',
+              font: { weight: 'bold', size: 12 }, 
+              formatter: (value) => {
+                const oculto = document.body.classList.contains('privacy-mode');
+                return oculto ? "R$ •••" : "R$ " + value.toFixed(2);
+              }
+            }
+          },
+          scales: {
+            x: { display: false, grid: { display: false } },
+            y: { grid: { display: false }, ticks: { font: { weight: 'bold' } } }
           }
         }
       });
