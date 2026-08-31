@@ -68,7 +68,6 @@ window.atualizarFiltroMeses = () => {
   if (mesesArr.includes(valAtual)) sel.value = valAtual;
 };
 
-// PREENCHE A LISTA DE BANCOS NO CELULAR
 window.renderizarDropdownContas = () => {
   const selF = document.getElementById('filtroConta');
   if(selF) {
@@ -120,7 +119,6 @@ window.renderizarRegistrosSalvos = () => {
     if (fDataFim) trns = trns.filter(t => t.data <= fDataFim);
   }
 
-  // APLICA O FILTRO DE BANCO
   if (fConta !== 'todas') trns = trns.filter(t => t.contaOrigem === fConta);
 
   if (fTextoRaw !== '') {
@@ -196,7 +194,7 @@ window.renderizarDashboard = () => {
     if (t.tipo === 'receita' || t.valor > 0) { tReceitas += t.valor; bancosResumo[t.contaOrigem].r += t.valor; } 
     else {
       let val = Math.abs(t.valor); tDespesas += val; bancosResumo[t.contaOrigem].d += val;
-      const catName = getCatLabel(t.categoria);
+      const catName = getCatLabel(t.categoria).split(' ')[1] || getCatLabel(t.categoria); // Pega nome curto para o gráfico
       if (!porCategoria[catName]) porCategoria[catName] = 0;
       porCategoria[catName] += val;
     }
@@ -223,7 +221,6 @@ window.renderizarDashboard = () => {
   let catArray = Object.keys(porCategoria).map(k => ({ nome: k, valor: porCategoria[k] }));
   catArray.sort((a,b) => b.valor - a.valor);
   
-  // Tabela de percentuais para Mobile (uma abaixo da outra)
   let totalDespesasGrafico = catArray.reduce((acc, curr) => acc + curr.valor, 0);
   let htmlTabelaPercentual = `<div style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px;">`;
   
@@ -239,6 +236,9 @@ window.renderizarDashboard = () => {
       </div>`;
   });
   htmlTabelaPercentual += `</div>`;
+
+  // MÁGICA DA RESPONSIVIDADE: Calcula a largura baseada na quantidade de categorias (Mínimo 100%, crescendo 18% por categoria nova)
+  let chartWidth = Math.max(100, catArray.length * 18);
   
   container.innerHTML = `
     <div style="display:flex; gap:10px; margin-bottom:10px;">
@@ -259,7 +259,14 @@ window.renderizarDashboard = () => {
     
     <div class="dash-card" style="margin-top: 20px;">
       <h4 style="margin: 0 0 15px 0; font-size:13px; text-transform:uppercase; text-align:center;">Despesas por Categoria</h4>
-      <div style="position: relative; height: 250px; width: 100%;"><canvas id="graficoCat"></canvas></div>
+      
+      <!-- CONTÊINER COM SCROLL HORIZONTAL (Deslize para os lados) -->
+      <div style="width: 100%; overflow-x: auto; padding-bottom: 10px;">
+        <div style="position: relative; height: 260px; width: ${chartWidth}%; min-width: 100%;">
+          <canvas id="graficoCat"></canvas>
+        </div>
+      </div>
+      
       ${htmlTabelaPercentual}
     </div>
   `;
@@ -272,33 +279,42 @@ window.renderizarDashboard = () => {
       Chart.register(ChartDataLabels);
       if (chartInstance) chartInstance.destroy();
       
-      // DE VOLTA AO GRÁFICO DE PIZZA (DOUGHNUT) OTIMIZADO PARA MOBILE
       chartInstance = new Chart(ctx, {
-        type: 'doughnut',
+        type: 'bar', // Gráfico em Barras Verticais
         data: {
-          labels: catArray.map(c => c.nome.substring(0,18)),
+          labels: catArray.map(c => c.nome.substring(0,12)), 
           datasets: [{ 
             data: catArray.map(c => c.valor), 
             backgroundColor: coresDistintas, 
-            borderWidth: 2, 
-            borderColor: '#ffffff' 
+            borderWidth: 0, 
+            borderRadius: 4,
+            barPercentage: 0.6,
+            categoryPercentage: 0.8
           }]
         },
         options: {
           responsive: true, 
           maintainAspectRatio: false,
+          layout: { padding: { top: 25 } }, // Espaço para os números no topo
           plugins: {
             legend: { display: false },
             datalabels: { 
-              color: '#fff', 
-              font: { weight: 'bold', size: 11 }, 
-              formatter: (value, context) => { 
-                if(document.body.classList.contains('privacy-mode')) return "•••";
-                let sum = 0;
-                context.chart.data.datasets[0].data.forEach(d => sum += d);
-                return (value * 100 / sum).toFixed(0) + "%"; 
+              color: '#475569', 
+              anchor: 'end',
+              align: 'top',
+              offset: 2,
+              font: { weight: 'bold', size: 10 }, 
+              formatter: (value) => { 
+                return document.body.classList.contains('privacy-mode') ? "•••" : "R$ " + value.toFixed(0); 
               } 
             }
+          },
+          scales: {
+            x: { 
+              grid: { display: false }, 
+              ticks: { font: { size: 9, weight: 'bold' }, maxRotation: 45, minRotation: 45 } 
+            },
+            y: { display: false } // Oculta o eixo Y para dar espaço 100% às barras
           }
         }
       });
