@@ -8,7 +8,6 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
   <link rel="stylesheet" href="mobile.css">
   
-  <!-- Apenas Chart.js para o Gráfico (Papaparse removido pois não há importação no app) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 </head>
@@ -71,6 +70,7 @@
               <option value="livre">Período Específico</option>
             </select>
           </div>
+          
           <div class="input-group" id="blocoFiltroMes">
             <select id="filtroMes" onchange="window.renderizarRegistrosSalvos()"><option value="todos">Todos os Meses</option></select>
           </div>
@@ -80,6 +80,14 @@
           <div class="input-group hidden" id="blocoFiltroDataFim">
             <label>Data Final:</label><input type="date" id="filtroDataFim" onchange="window.renderizarRegistrosSalvos()">
           </div>
+
+          <!-- O FILTRO DE BANCO VOLTOU -->
+          <div class="input-group">
+            <select id="filtroConta" onchange="window.renderizarRegistrosSalvos()">
+              <option value="todas">Todos os Bancos / Contas</option>
+            </select>
+          </div>
+
           <div class="input-group">
             <input type="text" id="filtroTexto" placeholder="Pesquisar ex: Mercado, PicPay..." oninput="window.renderizarRegistrosSalvos()">
           </div>
