@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>M&R Mobile</title>
+  
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192x192.png">
+  <link rel="stylesheet" href="mobile.css">
+  
+  <!-- Apenas Chart.js para o Gráfico (Papaparse removido pois não há importação no app) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="tela-login">
+    <div class="login-card">
+      <div class="login-header">
+        <h2>COST SAVINGS M&R</h2>
+        <p>APP DE BOLSO</p>
+      </div>
+      <div class="input-group">
+        <label>E-mail Corporativo</label>
+        <input type="email" id="emailLogin" placeholder="exemplo@martinserosa.com">
+      </div>
+      <div class="input-group">
+        <label>Senha de Acesso</label>
+        <input type="password" id="senhaLogin" placeholder="••••••••">
+      </div>
+      <button onclick="window.fazerLogin()" class="btn-login" id="btnAcesso">ENTRAR</button>
+    </div>
+  </div>
+
+  <!-- APP PRINCIPAL -->
+  <div id="app" class="hidden">
+    
+    <header class="app-header noprint">
+      <div>
+        <h1>M&R FINANÇAS</h1>
+        <p>Auditoria & Consulta</p>
+      </div>
+      <button id="btn-privacy" onclick="window.togglePrivacy()" style="background:none; border:none; font-size:22px; filter: grayscale(100%); padding:5px;">👁️</button>
+    </header>
+
+    <main class="app-content" id="app-content">
+
+      <!-- ABA 1: DASHBOARD -->
+      <div id="painel-dashboard" class="panel active">
+        <div class="onlyprint" style="text-align: center; margin-bottom: 20px;">
+          <h2 style="margin:0;">M&R FINANÇAS</h2><p style="margin:0;">Relatório de Indicadores</p><hr>
+        </div>
+        
+        <div id="painel-dashboard-content">A carregar indicadores...</div>
+      </div>
+
+      <!-- ABA 2: REGISTROS E EXTRATOS -->
+      <div id="painel-registros" class="panel">
+        <div class="onlyprint" style="text-align: center; margin-bottom: 20px;">
+          <h2 style="margin:0;">M&R FINANÇAS</h2><p style="margin:0;">Extrato Consolidado</p><hr>
+        </div>
+
+        <div class="dash-card noprint">
+          <button class="btn-export" onclick="window.print()">🖨️ Exportar PDF do Filtro</button>
+          
+          <div class="input-group">
+            <label>Modo de Consulta:</label>
+            <select id="modoPeriodo" onchange="window.alternarModoPeriodo()">
+              <option value="mes">Fatura / Mês Fechado</option>
+              <option value="livre">Período Específico</option>
+            </select>
+          </div>
+          <div class="input-group" id="blocoFiltroMes">
+            <select id="filtroMes" onchange="window.renderizarRegistrosSalvos()"><option value="todos">Todos os Meses</option></select>
+          </div>
+          <div class="input-group hidden" id="blocoFiltroDataInicio">
+            <label>Data Inicial:</label><input type="date" id="filtroDataInicio" onchange="window.renderizarRegistrosSalvos()">
+          </div>
+          <div class="input-group hidden" id="blocoFiltroDataFim">
+            <label>Data Final:</label><input type="date" id="filtroDataFim" onchange="window.renderizarRegistrosSalvos()">
+          </div>
+          <div class="input-group">
+            <input type="text" id="filtroTexto" placeholder="Pesquisar ex: Mercado, PicPay..." oninput="window.renderizarRegistrosSalvos()">
+          </div>
+        </div>
+
+        <div id="painel-resumo-filtros"></div>
+        <div id="area-registros-filtrados"></div>
+      </div>
+
+    </main>
+
+    <!-- NAVEGAÇÃO INFERIOR -->
+    <nav class="bottom-nav noprint">
+      <button class="nav-btn active" id="btn-tab-dashboard" onclick="window.mudarAba('dashboard')">
+        <span class="nav-icon">📊</span>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-btn" id="btn-tab-registros" onclick="window.mudarAba('registros')">
+        <span class="nav-icon">🧾</span>
+        <span>Extratos</span>
+      </button>
+      <button class="nav-btn" onclick="window.sairApp()">
+        <span class="nav-icon">🚪</span>
+        <span>Sair</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <script type="module" src="mobile.js"></script>
+</body>
+</html>
