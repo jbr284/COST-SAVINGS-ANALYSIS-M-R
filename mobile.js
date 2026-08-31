@@ -68,6 +68,18 @@ window.atualizarFiltroMeses = () => {
   if (mesesArr.includes(valAtual)) sel.value = valAtual;
 };
 
+// PREENCHE A LISTA DE BANCOS NO CELULAR
+window.renderizarDropdownContas = () => {
+  const selF = document.getElementById('filtroConta');
+  if(selF) {
+    selF.innerHTML = '<option value="todas">Todos os Bancos / Contas</option>';
+    window.contas.forEach(c => {
+      selF.appendChild(new Option(`${c.banco} - ${c.titular}`, c.id));
+    });
+    selF.appendChild(new Option('Lançamentos Manuais / Gerais', 'Manual'));
+  }
+};
+
 window.carregarTodosOsDados = async () => {
   try {
     const [snapContas, snapTransacoes, snapCats] = await Promise.all([
@@ -81,6 +93,7 @@ window.carregarTodosOsDados = async () => {
     window.categoriasExtras = snapCats.docs.map(d => d.data());
     
     window.atualizarFiltroMeses();
+    window.renderizarDropdownContas();
     window.renderizarRegistrosSalvos();
     window.renderizarDashboard();
   } catch (e) { console.error("Erro DB: ", e); }
@@ -93,6 +106,7 @@ window.renderizarRegistrosSalvos = () => {
   const currentScroll = appContent ? appContent.scrollTop : 0;
   
   const modoPeriodo = document.getElementById('modoPeriodo').value;
+  const fConta = document.getElementById('filtroConta') ? document.getElementById('filtroConta').value : 'todas';
   const fTextoRaw = document.getElementById('filtroTexto').value.trim();
   let trns = [...window.transacoes];
   
@@ -105,6 +119,9 @@ window.renderizarRegistrosSalvos = () => {
     if (fDataInicio) trns = trns.filter(t => t.data >= fDataInicio);
     if (fDataFim) trns = trns.filter(t => t.data <= fDataFim);
   }
+
+  // APLICA O FILTRO DE BANCO
+  if (fConta !== 'todas') trns = trns.filter(t => t.contaOrigem === fConta);
 
   if (fTextoRaw !== '') {
     const txt = fTextoRaw.toLowerCase();
@@ -155,7 +172,7 @@ window.renderizarRegistrosSalvos = () => {
         <div class="txn-desc">${t.descricao}</div>
         <div class="txn-footer">
           <span class="txn-cat">${getCatLabel(t.categoria)}</span>
-          <span class="txn-val occultar-valor ${t.valor<0 ? 'val-neg' : 'val-pos'}">R$ ${t.valor.toFixed(2)}</span>
+          <span class="txn-val ocultar-valor ${t.valor<0 ? 'val-neg' : 'val-pos'}">R$ ${t.valor.toFixed(2)}</span>
         </div>
       </div>
     `;
@@ -205,7 +222,23 @@ window.renderizarDashboard = () => {
 
   let catArray = Object.keys(porCategoria).map(k => ({ nome: k, valor: porCategoria[k] }));
   catArray.sort((a,b) => b.valor - a.valor);
-  let chartHeight = Math.max(250, catArray.length * 35); 
+  
+  // Tabela de percentuais para Mobile (uma abaixo da outra)
+  let totalDespesasGrafico = catArray.reduce((acc, curr) => acc + curr.valor, 0);
+  let htmlTabelaPercentual = `<div style="margin-top: 20px; display: flex; flex-direction: column; gap: 8px;">`;
+  
+  catArray.forEach(c => {
+    let perc = totalDespesasGrafico > 0 ? ((c.valor / totalDespesasGrafico) * 100).toFixed(1) : 0;
+    htmlTabelaPercentual += `
+      <div style="display: flex; justify-content: space-between; align-items: center; background: #F8FAFC; padding: 10px 15px; border-radius: 6px; border: 1px solid #E2E8F0;">
+        <span style="font-size: 11px; font-weight: 700; color: var(--text-main);">${c.nome}</span>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <span class="ocultar-valor" style="font-size: 13px; font-weight: 800; color: var(--danger);">R$ ${c.valor.toFixed(2)}</span>
+          <span class="ocultar-valor" style="font-size: 13px; font-weight: 900; color: var(--tab-bg);">${perc}%</span>
+        </div>
+      </div>`;
+  });
+  htmlTabelaPercentual += `</div>`;
   
   container.innerHTML = `
     <div style="display:flex; gap:10px; margin-bottom:10px;">
@@ -223,9 +256,11 @@ window.renderizarDashboard = () => {
       <div class="ocultar-valor" style="font-size:22px; font-weight:900; color:${balanco>=0?'var(--success)':'var(--danger)'};">R$ ${balanco.toFixed(2)}</div>
     </div>
     ${htmlBancos}
+    
     <div class="dash-card" style="margin-top: 20px;">
       <h4 style="margin: 0 0 15px 0; font-size:13px; text-transform:uppercase; text-align:center;">Despesas por Categoria</h4>
-      <div style="position: relative; height: ${chartHeight}px; width: 100%;"><canvas id="graficoCat"></canvas></div>
+      <div style="position: relative; height: 250px; width: 100%;"><canvas id="graficoCat"></canvas></div>
+      ${htmlTabelaPercentual}
     </div>
   `;
   
@@ -236,19 +271,35 @@ window.renderizarDashboard = () => {
     if (ctx) {
       Chart.register(ChartDataLabels);
       if (chartInstance) chartInstance.destroy();
+      
+      // DE VOLTA AO GRÁFICO DE PIZZA (DOUGHNUT) OTIMIZADO PARA MOBILE
       chartInstance = new Chart(ctx, {
-        type: 'bar',
+        type: 'doughnut',
         data: {
-          labels: catArray.map(c => c.nome.substring(0,18)), // Trunca nomes longos na tela pequena
-          datasets: [{ data: catArray.map(c => c.valor), backgroundColor: coresDistintas, borderRadius: 4 }]
+          labels: catArray.map(c => c.nome.substring(0,18)),
+          datasets: [{ 
+            data: catArray.map(c => c.valor), 
+            backgroundColor: coresDistintas, 
+            borderWidth: 2, 
+            borderColor: '#ffffff' 
+          }]
         },
         options: {
-          indexAxis: 'y', responsive: true, maintainAspectRatio: false, layout: { padding: { right: 50 } },
+          responsive: true, 
+          maintainAspectRatio: false,
           plugins: {
             legend: { display: false },
-            datalabels: { color: '#475569', anchor: 'end', align: 'end', font: { weight: 'bold', size: 10 }, formatter: (value) => { return document.body.classList.contains('privacy-mode') ? "R$ •••" : "R$ " + value.toFixed(0); } }
-          },
-          scales: { x: { display: false }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } }
+            datalabels: { 
+              color: '#fff', 
+              font: { weight: 'bold', size: 11 }, 
+              formatter: (value, context) => { 
+                if(document.body.classList.contains('privacy-mode')) return "•••";
+                let sum = 0;
+                context.chart.data.datasets[0].data.forEach(d => sum += d);
+                return (value * 100 / sum).toFixed(0) + "%"; 
+              } 
+            }
+          }
         }
       });
     }
