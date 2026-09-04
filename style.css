@@ -86,13 +86,15 @@ body.privacy-mode #btn-privacy::after {
 .btn-hall-red:hover { background-color: #EF4444; color: white; }
 
 #app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-.app-header { background-color: var(--header-bg); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+
+/* CABEÇALHO COM FLEX-SHRINK 0 PARA NÃO SER ESMAGADO */
+.app-header { background-color: var(--header-bg); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; z-index: 10; flex-shrink: 0; }
 .app-header h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 0.5px; }
 .app-header p { margin: 2px 0 0 0; font-size: 12px; color: #94A3B8; }
 .btn-header-home { background-color: #334155; border: none; color: white; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; }
 .btn-header-home:hover { background-color: #475569; }
 
-/* NOVO MENU DE NAVEGAÇÃO ESPELHADO COM O HUB */
+/* MENU DE NAVEGAÇÃO PROTEGIDO CONTRA CORTE (FLEX-SHRINK 0) */
 .tab-bar { 
   background-color: var(--header-bg); 
   display: flex; 
@@ -101,7 +103,14 @@ body.privacy-mode #btn-privacy::after {
   overflow-x: auto; 
   border-top: 1px solid rgba(255,255,255,0.05);
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+  flex-shrink: 0;
 }
+
+/* Scrollbar elegante para a tab-bar caso a tela do monitor seja estreita */
+.tab-bar::-webkit-scrollbar { height: 6px; }
+.tab-bar::-webkit-scrollbar-track { background: transparent; }
+.tab-bar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+.tab-bar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
 
 .tab-btn { 
   color: rgba(255,255,255,0.6); 
@@ -112,16 +121,16 @@ body.privacy-mode #btn-privacy::after {
   border-radius: 6px; 
   cursor: pointer; 
   transition: all 0.2s ease; 
-  white-space: nowrap; /* Impede o esmagamento do texto */
+  white-space: nowrap;
 }
 
-/* Cores Inativas (Modo Fundo Escurecido) */
+/* Cores Inativas */
 #btn-tab-importacao { background-color: rgba(30, 58, 138, 0.3); border: 1px solid rgba(30, 58, 138, 0.7); }
 #btn-tab-registros { background-color: rgba(46, 125, 50, 0.3); border: 1px solid rgba(46, 125, 50, 0.7); }
 #btn-tab-dashboard { background-color: rgba(217, 119, 6, 0.3); border: 1px solid rgba(217, 119, 6, 0.7); }
 #btn-tab-configuracoes { background-color: rgba(51, 65, 85, 0.3); border: 1px solid rgba(51, 65, 85, 0.7); }
 
-/* Cores Ativas e Hover (As mesmas do HUB) */
+/* Cores Ativas e Hover */
 #btn-tab-importacao.active, #btn-tab-importacao:hover { background-color: #1E3A8A; color: #fff; border-color: #1E3A8A; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
 #btn-tab-registros.active, #btn-tab-registros:hover { background-color: #2E7D32; color: #fff; border-color: #2E7D32; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
 #btn-tab-dashboard.active, #btn-tab-dashboard:hover { background-color: #D97706; color: #fff; border-color: #D97706; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
