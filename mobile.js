@@ -194,7 +194,7 @@ window.renderizarDashboard = () => {
     if (t.tipo === 'receita' || t.valor > 0) { tReceitas += t.valor; bancosResumo[t.contaOrigem].r += t.valor; } 
     else {
       let val = Math.abs(t.valor); tDespesas += val; bancosResumo[t.contaOrigem].d += val;
-      const catName = getCatLabel(t.categoria).split(' ')[1] || getCatLabel(t.categoria); // Pega nome curto para o gráfico
+      const catName = getCatLabel(t.categoria).split(' ')[1] || getCatLabel(t.categoria); 
       if (!porCategoria[catName]) porCategoria[catName] = 0;
       porCategoria[catName] += val;
     }
@@ -237,7 +237,6 @@ window.renderizarDashboard = () => {
   });
   htmlTabelaPercentual += `</div>`;
 
-  // MÁGICA DA RESPONSIVIDADE: Calcula a largura baseada na quantidade de categorias (Mínimo 100%, crescendo 18% por categoria nova)
   let chartWidth = Math.max(100, catArray.length * 18);
   
   container.innerHTML = `
@@ -260,7 +259,6 @@ window.renderizarDashboard = () => {
     <div class="dash-card" style="margin-top: 20px;">
       <h4 style="margin: 0 0 15px 0; font-size:13px; text-transform:uppercase; text-align:center;">Despesas por Categoria</h4>
       
-      <!-- CONTÊINER COM SCROLL HORIZONTAL (Deslize para os lados) -->
       <div style="width: 100%; overflow-x: auto; padding-bottom: 10px;">
         <div style="position: relative; height: 260px; width: ${chartWidth}%; min-width: 100%;">
           <canvas id="graficoCat"></canvas>
@@ -280,7 +278,7 @@ window.renderizarDashboard = () => {
       if (chartInstance) chartInstance.destroy();
       
       chartInstance = new Chart(ctx, {
-        type: 'bar', // Gráfico em Barras Verticais
+        type: 'bar',
         data: {
           labels: catArray.map(c => c.nome.substring(0,12)), 
           datasets: [{ 
@@ -295,7 +293,7 @@ window.renderizarDashboard = () => {
         options: {
           responsive: true, 
           maintainAspectRatio: false,
-          layout: { padding: { top: 25 } }, // Espaço para os números no topo
+          layout: { padding: { top: 25 } }, 
           plugins: {
             legend: { display: false },
             datalabels: { 
@@ -314,7 +312,7 @@ window.renderizarDashboard = () => {
               grid: { display: false }, 
               ticks: { font: { size: 9, weight: 'bold' }, maxRotation: 45, minRotation: 45 } 
             },
-            y: { display: false } // Oculta o eixo Y para dar espaço 100% às barras
+            y: { display: false } 
           }
         }
       });
@@ -325,10 +323,27 @@ window.renderizarDashboard = () => {
 window.mudarAba = (aba) => {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById(`btn-tab-${aba}`);
-  if(btn) btn.classList.add('active');
+  
+  const header = document.querySelector('.app-header');
+  const nav = document.querySelector('.bottom-nav');
+  const content = document.getElementById('app-content');
+
+  // Lógica de Ocultar Menus na tela de Início (Hall)
+  if (aba === 'home') {
+    if (header) header.classList.add('hidden');
+    if (nav) nav.classList.add('hidden');
+    if (content) content.style.padding = '0';
+  } else {
+    if (header) header.classList.remove('hidden');
+    if (nav) nav.classList.remove('hidden');
+    if (content) content.style.padding = '15px 15px 80px 15px';
+    const btn = document.getElementById(`btn-tab-${aba}`);
+    if (btn) btn.classList.add('active');
+  }
+
   const painelAtivo = document.getElementById(`painel-${aba}`);
   if(painelAtivo) painelAtivo.classList.add('active');
+  
   if (aba === 'registros') window.renderizarRegistrosSalvos();
   if (aba === 'dashboard') window.renderizarDashboard();
 };
@@ -349,7 +364,8 @@ onAuthStateChanged(auth, (u) => {
   if (u) { 
     document.getElementById('tela-login').classList.add('hidden'); 
     document.getElementById('app').classList.remove('hidden');
-    window.carregarTodosOsDados(); 
+    window.carregarTodosOsDados();
+    window.mudarAba('home'); // Inicia direto no Hall
   } else { 
     document.getElementById('tela-login').classList.remove('hidden'); 
     document.getElementById('app').classList.add('hidden');
