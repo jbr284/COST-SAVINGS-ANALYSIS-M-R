@@ -35,7 +35,7 @@
   <!-- APP PRINCIPAL -->
   <div id="app" class="hidden">
     
-    <header class="app-header noprint">
+    <header class="app-header noprint hidden">
       <div>
         <h1>M&R FINANÇAS</h1>
         <p>Auditoria & Consulta</p>
@@ -45,8 +45,20 @@
 
     <main class="app-content" id="app-content">
 
+      <!-- ABA 0: HOME / HALL -->
+      <div id="painel-home" class="panel active">
+        <div class="hall-wrapper">
+          <div class="hall-content">
+            <h2 class="hall-title">COST SAVINGS M&R<br><span style="font-size: 12px; color: #94A3B8;">APP DE BOLSO</span></h2>
+            <button class="btn-hall btn-hall-orange" onclick="window.mudarAba('dashboard')">INDICADORES</button>
+            <button class="btn-hall btn-hall-green" onclick="window.mudarAba('registros')">EXTRATOS E PESQUISA</button>
+            <button class="btn-hall btn-hall-red" onclick="window.sairApp()">SAIR DO APLICATIVO</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ABA 1: DASHBOARD -->
-      <div id="painel-dashboard" class="panel active">
+      <div id="painel-dashboard" class="panel">
         <div class="onlyprint" style="text-align: center; margin-bottom: 20px;">
           <h2 style="margin:0;">M&R FINANÇAS</h2><p style="margin:0;">Relatório de Indicadores</p><hr>
         </div>
@@ -81,7 +93,7 @@
             <label>Data Final:</label><input type="date" id="filtroDataFim" onchange="window.renderizarRegistrosSalvos()">
           </div>
 
-          <!-- O FILTRO DE BANCO VOLTOU -->
+          <!-- FILTRO DE BANCO -->
           <div class="input-group">
             <select id="filtroConta" onchange="window.renderizarRegistrosSalvos()">
               <option value="todas">Todos os Bancos / Contas</option>
@@ -100,18 +112,18 @@
     </main>
 
     <!-- NAVEGAÇÃO INFERIOR -->
-    <nav class="bottom-nav noprint">
-      <button class="nav-btn active" id="btn-tab-dashboard" onclick="window.mudarAba('dashboard')">
+    <nav class="bottom-nav noprint hidden">
+      <button class="nav-btn active" id="btn-tab-home" onclick="window.mudarAba('home')">
+        <span class="nav-icon">🏠</span>
+        <span>Início</span>
+      </button>
+      <button class="nav-btn" id="btn-tab-dashboard" onclick="window.mudarAba('dashboard')">
         <span class="nav-icon">📊</span>
         <span>Dashboard</span>
       </button>
       <button class="nav-btn" id="btn-tab-registros" onclick="window.mudarAba('registros')">
         <span class="nav-icon">🧾</span>
         <span>Extratos</span>
-      </button>
-      <button class="nav-btn" onclick="window.sairApp()">
-        <span class="nav-icon">🚪</span>
-        <span>Sair</span>
       </button>
     </nav>
 
