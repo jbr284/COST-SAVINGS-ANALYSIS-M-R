@@ -35,7 +35,6 @@ const CATEGORIAS_PADRAO = [
   {v: 'avulso', l: '🏛️ Saldo Inicial'}
 ];
 
-// O TEXTO DO OLHO NÃO MUDA MAIS. A LINHA DIAGONAL É FEITA VIA CSS.
 window.togglePrivacy = () => {
   const body = document.body;
   body.classList.toggle('privacy-mode');
@@ -355,6 +354,10 @@ function finalizarImportacao() {
     window.mudarAba('registros');
     window.renderizarRegistrosSalvos();
   } else alert("Nenhuma transação válida encontrada.");
+  
+  // Limpa o input de conta para forçar a seleção no próximo extrato
+  const selectConta = document.getElementById('contaImportacao');
+  if (selectConta) selectConta.value = '';
 }
 
 window.renderizarRegistrosSalvos = () => {
@@ -452,14 +455,23 @@ window.renderizarRegistrosSalvos = () => {
     `;
   }
 
-  let htmlS = `
+  // Bloco de Ações em Lote e Nova Tabela Dinâmica
+  let bulkActions = `
+    <div id="bulk-actions" class="noprint hidden" style="background: #FEF2F2; border: 1px solid #FECACA; padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+      <span style="color: var(--danger); font-size: 14px; font-weight: bold;"><span id="bulk-count">0</span> registro(s) selecionado(s)</span>
+      <button class="btn" style="background-color: var(--danger); padding: 8px 15px; font-size: 13px;" onclick="window.apagarSelecionados()">🗑️ Apagar Selecionados</button>
+    </div>
+  `;
+
+  let htmlS = bulkActions + `
     <div class="table-container">
       <table class="table-registros">
         <thead>
           <tr>
+            <th class="noprint" style="width: 4%; text-align: center;"><input type="checkbox" id="chkSelectAll" style="cursor:pointer; width:16px; height:16px;" onclick="window.toggleCheckAll(this)"></th>
             <th style="width: 8%;">Data</th>
             <th style="width: 12%;">Banco</th>
-            <th style="width: 35%;">Descrição</th>
+            <th style="width: 31%;">Descrição</th>
             <th style="text-align:right; width: 15%;">Valor</th>
             <th style="width: 20%;">Categoria</th>
             <th class="noprint" style="text-align:center; width: 10%;">Ações</th>
@@ -477,6 +489,9 @@ window.renderizarRegistrosSalvos = () => {
     }
     
     htmlS += `<tr style="${bgCat}">
+      <td class="noprint" style="text-align: center;">
+        <input type="checkbox" class="chk-item" value="${t.id}" style="cursor:pointer; width:16px; height:16px;" onclick="window.checkSelection()">
+      </td>
       <td style="color: #64748B;">${dia}/${mes}</td>
       <td style="font-weight: 700; color: var(--tab-bg); font-size: 11px; text-transform: uppercase;">${nomeBanco}</td>
       <td style="font-weight: 600;">${t.descricao}</td>
@@ -949,6 +964,63 @@ window.mostrarToast = (m) => {
   t.classList.remove('show');
   void t.offsetWidth;
   t.classList.add('show'); 
+};
+
+// --- NOVAS FUNÇÕES PARA EXCLUSÃO EM LOTE (PONTO 2) ---
+
+window.toggleCheckAll = (el) => {
+  const checkboxes = document.querySelectorAll('.chk-item');
+  checkboxes.forEach(chk => chk.checked = el.checked);
+  window.checkSelection();
+};
+
+window.checkSelection = () => {
+  const checkboxes = document.querySelectorAll('.chk-item:checked');
+  const bulkDiv = document.getElementById('bulk-actions');
+  const bulkCount = document.getElementById('bulk-count');
+  const checkAll = document.getElementById('chkSelectAll');
+  const allCheckboxes = document.querySelectorAll('.chk-item');
+
+  if (!bulkDiv) return;
+
+  if (checkboxes.length > 0) {
+    bulkDiv.classList.remove('hidden');
+    if(bulkCount) bulkCount.innerText = checkboxes.length;
+  } else {
+    bulkDiv.classList.add('hidden');
+  }
+
+  // Desmarca o checkbox "Selecionar Todos" caso o usuário desmarque uma linha individualmente
+  if (checkAll && allCheckboxes.length > 0) {
+    checkAll.checked = checkboxes.length === allCheckboxes.length;
+  }
+};
+
+window.apagarSelecionados = async () => {
+  const checkboxes = document.querySelectorAll('.chk-item:checked');
+  if (checkboxes.length === 0) return;
+  
+  if (!confirm(`⚠️ ATENÇÃO: Tem certeza que deseja APAGAR os ${checkboxes.length} registros selecionados?\n\nEsta ação excluirá os dados permanentemente do Banco de Dados e não pode ser desfeita.`)) return;
+
+  const idsParaApagar = Array.from(checkboxes).map(chk => chk.value);
+  window.mostrarToast(`Apagando ${idsParaApagar.length} registros... Aguarde.`);
+
+  try {
+    // Apaga em massa no Firebase usando Promise.all (rápido e seguro)
+    await Promise.all(idsParaApagar.map(id => deleteDoc(doc(db, "banco_transacoes", id))));
+
+    // Limpa a memória local
+    window.transacoes = window.transacoes.filter(t => !idsParaApagar.includes(t.id));
+
+    window.mostrarToast(`${idsParaApagar.length} registros apagados com sucesso!`);
+    
+    // Atualiza as interfaces visuais
+    window.atualizarFiltroMeses();
+    window.renderizarRegistrosSalvos();
+    window.renderizarDashboard();
+  } catch (e) {
+    alert("Erro ao excluir em lote: " + e.message);
+  }
 };
 
 onAuthStateChanged(auth, (u) => {
