@@ -73,7 +73,7 @@ window.renderizarDropdownContas = () => {
   if(selF) {
     selF.innerHTML = '<option value="todas">Todos os Bancos / Contas</option>';
     window.contas.forEach(c => {
-      selF.appendChild(new Option(`${c.banco} - ${c.titular}`, c.id));
+      selF.appendChild(new Option(`${c.banco} -${c.titular}`, c.id));
     });
     selF.appendChild(new Option('Lançamentos Manuais / Gerais', 'Manual'));
   }
@@ -134,23 +134,39 @@ window.renderizarRegistrosSalvos = () => {
     return;
   }
 
+  // CÁLCULO 1: O Resultado (Sobra) Apenas do Período Filtrado
   let resReceitas = 0; let resDespesas = 0;
   trns.forEach(t => { if (t.valor >= 0) resReceitas += t.valor; else resDespesas += Math.abs(t.valor); });
   let resSaldo = resReceitas - resDespesas;
   
+  // CÁLCULO 2: O Saldo Real Acumulado na Conta (Histórico Total)
+  let dataLimite = trns.length > 0 ? trns[0].data : '9999-12-31';
+  let historicoAteData = window.transacoes.filter(t => t.data <= dataLimite);
+  
+  if (fConta !== 'todas') {
+    historicoAteData = historicoAteData.filter(t => t.contaOrigem === fConta);
+  }
+  
+  let saldoReal = 0;
+  historicoAteData.forEach(t => { saldoReal += t.valor; });
+  
   containerResumo.innerHTML = `
     <div class="dash-card">
       <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span style="font-size:12px; font-weight:bold; color:var(--text-main);">Entradas</span>
+        <span style="font-size:12px; font-weight:bold; color:var(--text-main);">Entradas (Período)</span>
         <span class="ocultar-valor" style="font-size:14px; font-weight:900; color:var(--success);">R$ ${resReceitas.toFixed(2)}</span>
       </div>
       <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
-        <span style="font-size:12px; font-weight:bold; color:var(--text-main);">Saídas</span>
+        <span style="font-size:12px; font-weight:bold; color:var(--text-main);">Saídas (Período)</span>
         <span class="ocultar-valor" style="font-size:14px; font-weight:900; color:var(--danger);">R$ ${resDespesas.toFixed(2)}</span>
       </div>
-      <div style="display: flex; justify-content: space-between;">
-        <span style="font-size:14px; font-weight:800; color:var(--text-main);">Balanço</span>
-        <span class="ocultar-valor" style="font-size:18px; font-weight:900; color:${resSaldo >= 0 ? 'var(--success)' : 'var(--danger)'};">R$ ${resSaldo.toFixed(2)}</span>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+        <span style="font-size:13px; font-weight:800; color:var(--text-main);">Sobrou no Mês</span>
+        <span class="ocultar-valor" style="font-size:16px; font-weight:900; color:${resSaldo >= 0 ? 'var(--success)' : 'var(--danger)'};">R$ ${resSaldo.toFixed(2)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; background: ${saldoReal >= 0 ? '#F0FDF4' : '#FEF2F2'}; padding: 12px; border-radius: 6px; border: 1px solid ${saldoReal >= 0 ? '#BBF7D0' : '#FECACA'};">
+        <span style="font-size:11px; font-weight:900; color:${saldoReal >= 0 ? '#166534' : '#991B1B'}; text-transform:uppercase;">Saldo Real na Conta</span>
+        <span class="ocultar-valor" style="font-size:18px; font-weight:900; color:${saldoReal >= 0 ? 'var(--success)' : 'var(--danger)'};">R$ ${saldoReal.toFixed(2)}</span>
       </div>
     </div>
   `;
