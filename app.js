@@ -428,6 +428,7 @@ window.renderizarRegistrosSalvos = () => {
     return;
   }
 
+  // CÁLCULO 1: O Resultado (Sobra) Apenas do Período Filtrado
   let resReceitas = 0;
   let resDespesas = 0;
   trns.forEach(t => {
@@ -435,27 +436,44 @@ window.renderizarRegistrosSalvos = () => {
     else resDespesas += Math.abs(t.valor);
   });
   let resSaldo = resReceitas - resDespesas;
+
+  // CÁLCULO 2: O Saldo Real Acumulado na Conta (Histórico Total)
+  // Descobre a última data exibida no filtro atual para o cálculo
+  let dataLimite = trns.length > 0 ? trns[0].data : '9999-12-31';
+  let historicoAteData = window.transacoes.filter(t => t.data <= dataLimite);
+  
+  // Respeita apenas o filtro do banco para mostrar o saldo real correto
+  if (fConta !== 'todas') {
+    historicoAteData = historicoAteData.filter(t => t.contaOrigem === fConta);
+  }
+  
+  let saldoReal = 0;
+  historicoAteData.forEach(t => { saldoReal += t.valor; });
   
   if(containerResumo) {
     containerResumo.innerHTML = `
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; background: #F8FAFC; padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; background: #F8FAFC; padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); align-items: center;">
         <div>
-          <h4 style="margin: 0 0 5px 0; color: #166534; font-size: 13px; text-transform: uppercase;">Entradas do Filtro</h4>
-          <div class="ocultar-valor" style="font-size: 20px; font-weight: 900; color: var(--success);">R$ ${resReceitas.toFixed(2)}</div>
+          <h4 style="margin: 0 0 5px 0; color: #166534; font-size: 11px; text-transform: uppercase;">Entradas (Período)</h4>
+          <div class="ocultar-valor" style="font-size: 18px; font-weight: 900; color: var(--success);">R$ ${resReceitas.toFixed(2)}</div>
         </div>
         <div>
-          <h4 style="margin: 0 0 5px 0; color: #991B1B; font-size: 13px; text-transform: uppercase;">Saídas do Filtro</h4>
-          <div class="ocultar-valor" style="font-size: 20px; font-weight: 900; color: var(--danger);">R$ ${resDespesas.toFixed(2)}</div>
+          <h4 style="margin: 0 0 5px 0; color: #991B1B; font-size: 11px; text-transform: uppercase;">Saídas (Período)</h4>
+          <div class="ocultar-valor" style="font-size: 18px; font-weight: 900; color: var(--danger);">R$ ${resDespesas.toFixed(2)}</div>
         </div>
         <div style="border-left: 2px solid #E2E8F0; padding-left: 15px;">
-          <h4 style="margin: 0 0 5px 0; color: var(--text-main); font-size: 13px; text-transform: uppercase;">Balanço Líquido</h4>
-          <div class="ocultar-valor" style="font-size: 20px; font-weight: 900; color: ${resSaldo >= 0 ? 'var(--success)' : 'var(--danger)'};">R$ ${resSaldo.toFixed(2)}</div>
+          <h4 style="margin: 0 0 5px 0; color: var(--text-main); font-size: 11px; text-transform: uppercase;">Sobrou no Mês</h4>
+          <div class="ocultar-valor" style="font-size: 18px; font-weight: 900; color: ${resSaldo >= 0 ? 'var(--success)' : 'var(--danger)'};">R$ ${resSaldo.toFixed(2)}</div>
+        </div>
+        <div style="background: ${saldoReal >= 0 ? '#F0FDF4' : '#FEF2F2'}; padding: 15px; border-radius: 6px; border: 1px solid ${saldoReal >= 0 ? '#BBF7D0' : '#FECACA'};">
+          <h4 style="margin: 0 0 5px 0; color: ${saldoReal >= 0 ? '#166534' : '#991B1B'}; font-size: 11px; text-transform: uppercase;">Saldo Real na Conta</h4>
+          <div class="ocultar-valor" style="font-size: 20px; font-weight: 900; color: ${saldoReal >= 0 ? 'var(--success)' : 'var(--danger)'};">R$ ${saldoReal.toFixed(2)}</div>
         </div>
       </div>
     `;
   }
 
-  // Bloco de Ações em Lote e Nova Tabela Dinâmica
+  // Bloco de Ações em Lote e Tabela Dinâmica
   let bulkActions = `
     <div id="bulk-actions" class="noprint hidden" style="background: #FEF2F2; border: 1px solid #FECACA; padding: 12px 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
       <span style="color: var(--danger); font-size: 14px; font-weight: bold;"><span id="bulk-count">0</span> registro(s) selecionado(s)</span>
@@ -966,8 +984,6 @@ window.mostrarToast = (m) => {
   t.classList.add('show'); 
 };
 
-// --- NOVAS FUNÇÕES PARA EXCLUSÃO EM LOTE (PONTO 2) ---
-
 window.toggleCheckAll = (el) => {
   const checkboxes = document.querySelectorAll('.chk-item');
   checkboxes.forEach(chk => chk.checked = el.checked);
@@ -990,7 +1006,6 @@ window.checkSelection = () => {
     bulkDiv.classList.add('hidden');
   }
 
-  // Desmarca o checkbox "Selecionar Todos" caso o usuário desmarque uma linha individualmente
   if (checkAll && allCheckboxes.length > 0) {
     checkAll.checked = checkboxes.length === allCheckboxes.length;
   }
@@ -1006,15 +1021,9 @@ window.apagarSelecionados = async () => {
   window.mostrarToast(`Apagando ${idsParaApagar.length} registros... Aguarde.`);
 
   try {
-    // Apaga em massa no Firebase usando Promise.all (rápido e seguro)
     await Promise.all(idsParaApagar.map(id => deleteDoc(doc(db, "banco_transacoes", id))));
-
-    // Limpa a memória local
     window.transacoes = window.transacoes.filter(t => !idsParaApagar.includes(t.id));
-
     window.mostrarToast(`${idsParaApagar.length} registros apagados com sucesso!`);
-    
-    // Atualiza as interfaces visuais
     window.atualizarFiltroMeses();
     window.renderizarRegistrosSalvos();
     window.renderizarDashboard();
